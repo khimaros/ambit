@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+
+import ambit
+import random
+import time
+
+
+def main():
+    config = ambit.Configuration()
+    config.profile.title = ''
+    config.profile.icon = ambit.Configuration.ICON_BLANK
+
+    ctrl = ambit.Controller(config)
+    ctrl.open()
+    ctrl.connect()
+
+    try:
+        while not ctrl.shutdown_event.is_set():
+            i = random.randint(1, len(ctrl.layout.connected()))
+            ctrl.led([{'r': random.randint(0, 255), 'g': random.randint(0, 255), 'b': random.randint(0, 255), 'i': i, 'm': 0}])
+            time.sleep(ambit.Controller.LED_DELAY_SECONDS)
+
+    except KeyboardInterrupt:
+        print('\r[0] Received interrupt, shutting down...')
+
+    ctrl.close()
+    ctrl.print_stats()
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,298 @@
+#!/usr/bin/env python3
+
+import ambit
+import math
+import random
+import threading
+import time
+
+
+class DemoSinebow:
+    def __init__(self, title, freq1, freq2, freq3, phase1, phase2, phase3, length, center, width):
+        self.title = title
+        self.freq1 = freq1
+        self.freq2 = freq2
+        self.freq3 = freq3
+        self.phase1 = phase1
+        self.phase2 = phase2
+        self.phase3 = phase3
+        self.length = length
+        self.center = center
+        self.width = width
+
+    # Reference: https://krazydad.com/tutorials/makecolors.php
+    def make_colors(self):
+        for i in range(self.length):
+            r = int(math.sin(self.freq1 * i + self.phase1) * self.width + self.center)
+            g = int(math.sin(self.freq2 * i + self.phase2) * self.width + self.center)
+            b = int(math.sin(self.freq3 * i + self.phase3) * self.width + self.center)
+            yield r, g, b
+
+
+class DemoScene:
+    def __init__(self):
+        self.control = 'FREQ'
+        self.lock = threading.Lock()
+        self.demo = None
+        self.available_demos = [
+            # Known visually appealing settings:
+            #   freq 0.3, 0.3, 0.3; length 50
+            #   freq 0.1, 0.2, 0.3; length 60
+            #   freq 0.1, 0.1, 0.1; length 65
+
+            # Starts out the same as "SLOW"
+            DemoSinebow(
+                title='USER',
+                freq1=0.1,
+                freq2=0.1,
+                freq3=0.1,
+                phase1=0,
+                phase2=2*math.pi/3,
+                phase3=4*math.pi/3,
+                length=65,
+                center=128,
+                width=127,
+            ),
+
+            DemoSinebow(
+                title='MOVE',
+                freq1=1.0/3,
+                freq2=0.275,
+                freq3=0.486,
+                phase1=0.455,
+                phase2=0.486,
+                phase3=1.286,
+                length=106,
+                center=63,
+                width=56
+            ),
+
+            DemoSinebow(
+                title='SLOW',
+                freq1=0.1,
+                freq2=0.1,
+                freq3=0.1,
+                phase1=0,
+                phase2=2*math.pi/3,
+                phase3=4*math.pi/3,
+                length=65,
+                center=128,
+                width=127,
+            ),
+        ]
+
+    def make_colors(self):
+        self.lock.acquire()
+        self.colors = list(self.demo.make_colors())
+        self.lock.release()
+
+    def set_phase1(self, value):
+        print('[D] Setting DemoScene phase1 to:', value)
+        self.available_demos[0].phase1 = value * math.pi / 3
+        self.ctrl.screen_string('PH/R: %f' % value)
+        self.switch_demo(0)
+
+    def set_phase2(self, value):
+        print('[D] Setting DemoScene phase2 to:', value)
+        self.available_demos[0].phase2 = value * math.pi / 3
+        self.ctrl.screen_string('PH/G: %f' % value)
+        self.switch_demo(0)
+
+    def set_phase3(self, value):
+        print('[D] Setting DemoScene phase3 to:', value)
+        self.available_demos[0].phase3 = value * math.pi / 3
+        self.ctrl.screen_string('PH/B: %f' % value)
+        self.switch_demo(0)
+
+    def set_freq1(self, value):
+        freq = value
+        print('[D] Setting DemoScene freq1 to:', freq)
+        self.available_demos[0].freq1 = freq
+        self.ctrl.screen_string('HZ/R: %f' % freq)
+        self.switch_demo(0)
+
+    def set_freq2(self, value):
+        freq = value
+        print('[D] Setting DemoScene freq2 to:', freq)
+        self.available_demos[0].freq2 = freq
+        self.ctrl.screen_string('HZ/G: %f' % freq)
+        self.switch_demo(0)
+
+    def set_freq3(self, value):
+        freq = value
+        print('[D] Setting DemoScene freq3 to:', freq)
+        self.available_demos[0].freq3 = freq
+        self.ctrl.screen_string('HZ/B: %f' % freq)
+        self.switch_demo(0)
+
+    def set_center(self, value):
+        print('[D] Setting DemoScene center to:', value)
+        self.available_demos[0].center = value
+        self.ctrl.screen_string('C: %d' % self.center)
+        self.switch_demo(0)
+
+    def set_width(self, value):
+        print('[D] Setting DemoScene width to:', value)
+        self.available_demos[0].width = value
+        self.ctrl.screen_string('W: %d' % self.width)
+        self.switch_demo(0)
+
+    def set_length(self, value):
+        self.available_demos[0].length = value or 1
+        print('[D] Setting DemoScene length to:', self.length)
+        self.ctrl.screen_string('L: %d' % self.length)
+        self.switch_demo(0)
+
+    def switch_demo(self, value):
+        if self.demo == self.available_demos[value]:
+            return
+        self.demo = self.available_demos[value]
+        self.make_colors()
+        print('[D] Switching demo to:', self.demo.title)
+        self.ctrl.screen_string('DEMO: %s' % self.demo.title)
+
+    def switch_control(self, value):
+        _, control = value
+        print('[D] Switching controls to:', control)
+        self.ctrl.screen_string('MODE: %s' % control)
+
+        limits = None
+        discrete = None
+        if control == 'FREQ':
+            limits = (0, 1)
+            discrete = False
+            name1 = 'FREQ RED'
+            name2 = 'FREQ GREEN'
+            name3 = 'FREQ BLUE'
+            callback1 = self.set_freq1
+            callback2 = self.set_freq2
+            callback3 = self.set_freq3
+        if control == 'PHASE':
+            limits = (0, 4)
+            discrete = False
+            name1 = 'PHASE RED'
+            name2 = 'PHASE GREEN'
+            name3 = 'PHASE BLUE'
+            callback1 = self.set_phase1
+            callback2 = self.set_phase2
+            callback3 = self.set_phase3
+        if control == 'META':
+            limits = (0, 255)
+            discrete = True
+            name1 = 'CENTER'
+            name2 = 'WIDTH'
+            name3 = 'LENGTH'
+            callback1 = self.set_center
+            callback2 = self.set_width
+            callback3 = self.set_length
+
+        dials = self.ctrl.layout.search(kind=ambit.Component.KIND_DIAL, rowwise=True)
+
+        ## DIAL 0
+
+        component = dials[0]
+        component.reset()
+        behavior = ambit.ComponentBehavior(
+                behavior=ambit.ComponentBehavior.TRIGGER,
+                limits=limits, threshold=1, discrete=discrete)
+        behavior.finalize()
+        component.set_callback(ambit.Configuration.INPUT_SET, name1, behavior, callback1, None)
+
+        ## DIAL 1
+
+        component = dials[1]
+        component.reset()
+        behavior = ambit.ComponentBehavior(
+                behavior=ambit.ComponentBehavior.TRIGGER,
+                limits=limits, threshold=1, discrete=discrete)
+        behavior.finalize()
+        component.set_callback(ambit.Configuration.INPUT_SET, name2, behavior, callback2, None)
+
+        ## DIAL 2
+
+        component = dials[2]
+        component.reset()
+        behavior = ambit.ComponentBehavior(
+                behavior=ambit.ComponentBehavior.TRIGGER,
+                limits=limits, threshold=1, discrete=discrete)
+        behavior.finalize()
+        component.set_callback(ambit.Configuration.INPUT_SET, name3, behavior, callback3, None)
+
+    def configure_callbacks(self):
+        buttons = self.ctrl.layout.search(kind=ambit.Component.KIND_BUTTON, rowwise=True)
+
+        component = buttons[0]
+        component.reset()
+        behavior = ambit.ComponentBehavior(
+                behavior=ambit.ComponentBehavior.CYCLE,
+                items=['FREQ', 'PHASE', 'META'],
+                threshold=1, loop=True, nested=True)
+        behavior.finalize()
+        component.set_callback(ambit.Configuration.INPUT_RELEASED, 'SwitchControl', behavior, self.switch_control, None)
+
+        component = buttons[1]
+        component.reset()
+        behavior = ambit.ComponentBehavior(
+                behavior=ambit.ComponentBehavior.CYCLE,
+                items=self.available_demos,
+                threshold=1, loop=True, default=0)
+        behavior.finalize()
+        component.set_callback(ambit.Configuration.INPUT_RELEASED, 'SwitchDemo', behavior, self.switch_demo, None)
+
+    def run(self):
+        config = ambit.Configuration()
+        config.profile.title = ''
+        config.profile.icon = ambit.Configuration.ICON_BLANK
+
+        ctrl = ambit.Controller(config)
+        ctrl.open()
+        ctrl.connect()
+        self.ctrl = ctrl
+
+        self.configure_callbacks()
+
+        self.switch_control((0, 'FREQ'))
+        self.switch_demo(0)
+
+        num_components = len(ctrl.layout.connected())
+        prev_length = 0
+        try:
+            while not ctrl.shutdown_event.is_set():
+                num_components = len(ctrl.layout.connected())
+
+                self.lock.acquire()
+                if prev_length != self.demo.length:
+                    pixel_colors = list(range(0, num_components))
+                    prev_length = self.demo.length
+                while len(pixel_colors) < num_components:
+                    pixel_colors.insert(pixel_colors[0] - 1)
+                pixel_colors = list(map(lambda x: (x + 1) % len(self.colors), pixel_colors))
+                pixels = [self.colors[pixel_colors[x % len(pixel_colors)]] for x in range(num_components)]
+                self.lock.release()
+
+                min_x, min_y, max_x, max_y = ctrl.layout.extrema()
+                w = abs(max_x - min_x) + 1
+                h = abs(max_y - min_y) + 1
+
+                ctrl.led_draw(pixels, min_x, max_y, w, h)
+
+                time.sleep(ambit.Controller.LED_DELAY_SECONDS * (num_components / 2))
+
+        except KeyboardInterrupt:
+            print('\r[0] Received interrupt, shutting down...')
+
+        except Exception as err:
+            self.ctrl.close()
+            raise
+
+        self.ctrl.close()
+        self.ctrl.print_stats()
+
+
+def main():
+    ds = DemoScene()
+    ds.run()
+
+
+if __name__ == '__main__':
+    main()

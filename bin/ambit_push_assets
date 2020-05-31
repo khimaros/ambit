@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+
+import ambit
+
+config = ambit.Configuration()
+
+ctrl = ambit.Controller(config)
+
+ctrl.open()
+
+ctrl.connect()
+
+ctrl.wait_for_layout()
+
+ctrl.configure_images()
+
+ctrl.close()

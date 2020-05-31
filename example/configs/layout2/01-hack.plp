@@ -1,0 +1,51 @@
+{
+  "app_version": "2.6.4",
+  "midiChannel": -1,
+  "module_mappings": {
+    "actionMap": {
+      "4}M": {
+        "set": { "action": "executeCommand", "argv": ["./example/scripts/hello.sh"], "threshold": 32 }
+      },
+      "4ls": {
+        "pressed": {},
+        "long_pressed": {},
+        "released": { "action": "executeCommand", "argv": ["./example/scripts/hello.sh", "GALAXY"] }
+      },
+      "4lf": {
+        "pressed": {},
+        "long_pressed": {},
+        "released": {}
+      },
+      "4A0": {
+        "pressed": {},
+        "long_pressed": {},
+        "released": { "action": "executeCommand", "argv": ["./example/scripts/hello.sh", "UNIVERSE"] },
+        "rotation_left": {},
+        "rotation_right": {},
+        "set": {}
+      },
+      "49d": {
+        "pressed": {},
+        "long_pressed": {},
+        "released": {},
+        "rotation_left": { "action": "switchFunctions", "invert": true, "threshold": 32 },
+        "rotation_right": { "action": "switchFunctions", "threshold": 32 },
+        "set": {}
+      },
+      "4FH": {
+        "pressed": {},
+        "long_pressed": {},
+        "released": {},
+        "rotation_left": { "action": "executeCommand", "argv": ["./example/scripts/hello.sh", "M-VERSE1"] },
+        "rotation_right": { "action": "executeCommand", "argv": ["./example/scripts/hello.sh", "M-VERSE2"] },
+        "set": {}
+      },
+      "4}=": {
+        "set": {}
+      }
+    }
+  },
+  "tabType": "Keyboard",
+  "tabUuid": "{b162b530-34f7-425f-bc4b-a40ebb5f64dc}",
+  "title": "HACK"
+}

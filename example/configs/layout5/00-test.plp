@@ -1,0 +1,47 @@
+{
+  "app_version": "2.6.4",
+  "midiChannel": -1,
+  "module_mappings": {
+    "actionMap": {
+      "[slot=(-2,0)]": {
+        "set": { "action": "testTrigger" }
+      },
+      "[slot=(-1,0)]": {
+        "pressed": {},
+        "released": { "action": "testCycle", "items": ["ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX"], "loop": true }
+      },
+      "[slot=(1,0)]": {
+        "pressed": { "action": "testTrigger" },
+        "released": { "action": "testTrigger" }
+      },
+      "[slot=(-1,-1)]": {
+        "pressed": { "action": "testAccumulate", "value": 1000 },
+        "released": {},
+        "rotation_left": { "action": "testAccumulate" },
+        "rotation_right": { "action": "testAccumulate" },
+        "set": {}
+      },
+      "[slot=(0,-1)]": {
+        "pressed": {},
+        "released": {},
+        "rotation_left": { "action": "testDelta" },
+        "rotation_right": { "action": "testDelta" },
+        "set": {}
+      },
+      "[slot=(1,-1)]": {
+        "pressed": { "action": "testTrigger", "value": 255 },
+        "released": {},
+        "rotation_left": {},
+        "rotation_right": {},
+        "set": { "action": "testTrigger" }
+      },
+      "[slot=(2,-1)]": {
+        "set": { "action": "testCycle", "items": ["ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX"] }
+      }
+    }
+  },
+  "orientation": 0,
+  "tabType": "Palette",
+  "tabUuid": "{b162b530-34f7-425f-bc4b-a40ebb5f64dc}",
+  "title": "TEST"
+}

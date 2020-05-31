@@ -1,0 +1,47 @@
+{
+  "app_version": "2.6.4",
+  "midiChannel": -1,
+  "module_mappings": {
+    "actionMap": {
+      "4}M": {
+        "set": { "action": "testTrigger" }
+      },
+      "4ls": {
+        "pressed": {},
+        "released": { "action": "testCycle", "items": ["ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX"], "loop": true }
+      },
+      "4lf": {
+        "pressed": { "action": "testTrigger" },
+        "released": { "action": "testTrigger" }
+      },
+      "4A0": {
+        "pressed": { "action": "testAccumulate", "value": 1000 },
+        "released": {},
+        "rotation_left": { "action": "testAccumulate" },
+        "rotation_right": { "action": "testAccumulate" },
+        "set": {}
+      },
+      "49d": {
+        "pressed": {},
+        "released": {},
+        "rotation_left": { "action": "testDelta" },
+        "rotation_right": { "action": "testDelta" },
+        "set": {}
+      },
+      "4FH": {
+        "pressed": { "action": "testTrigger", "value": 255 },
+        "released": {},
+        "rotation_left": {},
+        "rotation_right": {},
+        "set": { "action": "testTrigger" }
+      },
+      "4}=": {
+        "set": { "action": "testCycle", "items": ["ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX"] }
+      }
+    }
+  },
+  "orientation": 180,
+  "tabType": "Palette",
+  "tabUuid": "{b162b530-34f7-425f-bc4b-a40ebb5f64dc}",
+  "title": "TEST"
+}

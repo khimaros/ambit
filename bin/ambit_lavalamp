@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+
+import ambit
+import numpy
+import random
+import time
+
+COLOR_SHIFT = 4
+
+
+def main():
+    config = ambit.Configuration()
+    config.profile.title = ''
+    config.profile.icon = ambit.Configuration.ICON_BLANK
+
+    ctrl = ambit.Controller(config)
+    ctrl.open()
+    ctrl.connect()
+
+    try:
+        num_components = len(ctrl.layout.connected())
+        component_leds = []
+        for i in range(num_components):
+            component_leds.append([220, 220, 220])
+
+        while not ctrl.shutdown_event.is_set():
+            # calculate next led value for each component
+            for i in range(num_components):
+                led = random.randint(0, 2)
+                change = COLOR_SHIFT
+                if random.randint(1, 2) == 2:
+                    change = -COLOR_SHIFT
+                value = component_leds[i][led] + change
+                if value > 255:
+                    value = 255
+                if value < 0:
+                    value = 0
+                component_leds[i][led] = value
+
+            # write the current led values to the device
+            led_messages = []
+            for c in range(num_components):
+                led = component_leds[c]
+                r, g, b = led
+                led_messages.append({'r': r, 'g': g, 'b': b, 'i': c + 1, 'm': 0})
+            ctrl.led(led_messages)
+
+            time.sleep(ambit.Controller.LED_DELAY_SECONDS * (num_components / 2))
+
+    except KeyboardInterrupt:
+        print('\r[0] Received interrupt, shutting down...')
+
+    except Exception as err:
+        ctrl.close()
+        raise
+
+    ctrl.close()
+    ctrl.print_stats()
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,51 @@
+{
+  "app_version": "2.6.4",
+  "midiChannel": -1,
+  "module_mappings": {
+    "actionMap": {
+      "4}M": {
+        "set": { "action": "executeCommand", "argv": ["./example/scripts/temperature.sh"], "limits": [50, 80] }
+      },
+      "4ls": {
+        "pressed": { "action": "executeCommand", "argv": ["./example/scripts/unlock.sh", "open"] },
+        "long_pressed": {},
+        "released": {}
+      },
+      "4lf": {
+        "pressed": {},
+        "long_pressed": {},
+        "released": {}
+      },
+      "4A0": {
+        "pressed": {},
+        "long_pressed": {},
+        "released": {},
+        "rotation_left": { "action": "executeCommand", "argv": ["./example/scripts/unlock.sh", "set"], "value": 15, "invert": true, "threshold": 32 },
+        "rotation_right": { "action": "executeCommand", "argv": ["./example/scripts/unlock.sh", "set"], "value": 15, "threshold": 32 },
+        "set": {}
+      },
+      "49d": {
+        "pressed": {},
+        "long_pressed": {},
+        "released": {},
+        "rotation_left": { "action": "switchFunctions", "invert": true, "threshold": 32 },
+        "rotation_right": { "action": "switchFunctions", "threshold": 32 },
+        "set": {}
+      },
+      "4FH": {
+        "pressed": {},
+        "long_pressed": {},
+        "released": {},
+        "rotation_left": {},
+        "rotation_right": {},
+        "set": {}
+      },
+      "4}=": {
+        "set": {}
+      }
+    }
+  },
+  "tabType": "Home",
+  "tabUuid": "{b162b530-34f7-425f-bc4b-a40ebb5f64dc}",
+  "title": "HOME"
+}

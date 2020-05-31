@@ -1,0 +1,157 @@
+{
+  "app_version": "2.6.4",
+  "layout": {
+    "c": [
+      {
+        "c": [
+          null,
+          {
+            "c": [
+              null,
+              {
+                "c": [
+                  null,
+                  {
+                    "c": [
+                      null,
+                      null,
+                      null,
+                      {
+                        "c": [
+                          null,
+                          null,
+                          null,
+                          {
+                            "c": [
+                              null,
+                              {
+                                "c": [
+                                  null,
+                                  null,
+                                  null
+                                ],
+                                "i": 8,
+                                "t": 1,
+                                "u": "4lf"
+                              },
+                              null
+                            ],
+                            "i": 7,
+                            "t": 1,
+                            "u": "4ls"
+                          },
+                          null
+                        ],
+                        "i": 6,
+                        "t": 3,
+                        "u": "4}="
+                      },
+                      null
+                    ],
+                    "i": 5,
+                    "t": 3,
+                    "u": "4}M"
+                  },
+                  null
+                ],
+                "i": 4,
+                "t": 2,
+                "u": "4A0"
+              },
+              null
+            ],
+            "i": 3,
+            "t": 2,
+            "u": "49d"
+          },
+          null
+        ],
+        "i": 2,
+        "t": 2,
+        "u": "4FH"
+      },
+      null,
+      null
+    ],
+    "i": 1,
+    "t": 0,
+    "u": "00000"
+  },
+  "midiChannel": -1,
+  "module_mappings": {
+    "colorMap": {
+      "00000": "#ffffff",
+      "49d": "#ffffff",
+      "4A0": "#ffffff",
+      "4FH": "#ffffff",
+      "4lf": "#ffffff",
+      "4ls": "#ffffff"
+    },
+    "joystickMap": {},
+    "keyMap": {
+      "4FH": {
+        "1": {
+          "dial_sensitivity": 6,
+          "label": "R",
+          "modifier_codes": [
+            "PK_MOD_LSHIFT"
+          ],
+          "virtual_code": "PK_R"
+        },
+        "2": {
+          "dial_sensitivity": 6,
+          "label": "L",
+          "modifier_codes": [
+            "PK_MOD_LSHIFT"
+          ],
+          "virtual_code": "PK_L"
+        }
+      },
+      "4lf": {
+        "0": {
+          "label": "Ctrl + C",
+          "modifier_codes": [
+            "PK_MOD_LCTRL"
+          ],
+          "virtual_code": "PK_C"
+        }
+      },
+      "4ls": {
+        "0": {
+          "label": "",
+          "modifier_codes": [
+            "PK_MOD_LMETA"
+          ],
+          "virtual_code": "PK_LEFTWINDOWS"
+        }
+      }
+    },
+    "macroMap": {},
+    "mediaMap": {},
+    "menuBarMap": {},
+    "shortcutsMap": {
+      "00000": "",
+      "49d": "",
+      "4A0": "",
+      "4FH": "",
+      "4lf": "",
+      "4ls": ""
+    }
+  },
+  "old_priorities": {
+    "old_buttons": [],
+    "old_dials": [],
+    "old_sliders": []
+  },
+  "os": "windows",
+  "priorities": [
+    "4ls",
+    "4lf",
+    "4FH",
+    "49d",
+    "4A0"
+  ],
+  "tabType": "Keyboard",
+  "tabUuid": "{ffb05962-01a0-4aac-ae39-51167b585fb5}",
+  "title": "KEYS"
+}

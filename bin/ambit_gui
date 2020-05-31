@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+
+import ambit
+import ambit.render
+
+
+def main():
+    config = ambit.Configuration(ambit.FLAGS.config_paths)
+    ctrl = ambit.Controller(config)
+    ctrl.open()
+    ctrl.connect()
+
+    display = ambit.render.Display(ctrl, shutdown_event=ctrl.shutdown_event)
+    display.run()
+
+    ctrl.communicate()
+    ctrl.close()
+    ctrl.print_stats()
+
+
+if __name__ == '__main__':
+    main()

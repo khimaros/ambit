@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+
+import ambit
+import time
+
+
+def main():
+    ambit.Controller.QUEUE_TIMEOUT_SECONDS = 0.5
+    ambit.Controller.SCREEN_STRING_DELAY_SECONDS = 0
+    ambit.Controller.SCREEN_STRING_QUEUE_DEPTH = 0
+    ambit.Controller.LED_DELAY_SECONDS = 0
+    ambit.Controller.LED_QUEUE_DEPTH = 0
+
+    config = ambit.Configuration()
+
+    ctrl = ambit.Controller(config)
+
+    ctrl.open()
+
+    ctrl.connect()
+
+    ctrl.wait_for_layout()
+
+    print('[B] Benchmark starting in two seconds!')
+
+    time.sleep(2)
+
+    start = time.time()
+    SCREEN_STRING_COUNT = 1000
+    # NOTE: with this screen length, the screen does not
+    # hard reset, regardless of the rate of incoming writes.
+    # However, running with a longer string such as 'Slider: 255'
+    # will cause problems with the display above 20/sec.
+    for i in range(SCREEN_STRING_COUNT):
+        ctrl.screen_string('ONE')
+        ctrl.screen_string('TWO')
+    ctrl.wait()
+    time_1 = time.time() - start
+
+    start = time.time()
+    LED_COUNT = 1000
+    for i in range(LED_COUNT):
+        ctrl.led([{'i': 1, 'r': 255, 'g': 255, 'b': 255, 'm': 0}])
+        ctrl.led([{'i': 1, 'r': 0, 'g': 0, 'b': 0, 'm': 0}])
+    ctrl.wait()
+    time_2 = time.time() - start
+
+    start = time.time()
+    CONFIGURE_LED_COUNT = 250
+    for i in range(CONFIGURE_LED_COUNT):
+        ctrl.configure_leds(255, 255, 255)
+        ctrl.configure_leds(0, 0, 0)
+    ctrl.wait()
+    time_3 = time.time() - start
+
+    ctrl.close()
+
+    # Display results
+
+    ctrl.print_stats()
+
+    print('==============================================')
+    print()
+    print('screen_string', time_1, SCREEN_STRING_COUNT / time_1, 'per second')
+    print('led', time_2, LED_COUNT / time_2, 'per second')
+    print('configure_leds', time_3, CONFIGURE_LED_COUNT / time_3, 'per second')
+    print()
+    print('==============================================')
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,51 @@
+{
+  "app_version": "2.6.4",
+  "midiChannel": -1,
+  "module_mappings": {
+    "actionMap": {
+      "4}M": {
+        "set": {}
+      },
+      "4ls": {
+        "pressed": {},
+        "long_pressed": {},
+        "released": { "action": "previousFunction" }
+      },
+      "4lf": {
+        "pressed": {},
+        "long_pressed": {},
+        "released": { "action": "nextFunction" }
+      },
+      "4A0": {
+        "pressed": { "action": "setColorRed", "threshold": 1, "value": 255 },
+        "long_pressed": {},
+        "released": {},
+        "rotation_right": { "action": "setColorRed" },
+        "rotation_left": { "action": "setColorRed" },
+        "set": {}
+      },
+      "49d": {
+        "pressed": { "action": "setColorGreen", "threshold": 1, "value": 255 },
+        "long_pressed": {},
+        "released": {},
+        "rotation_right": { "action": "setColorGreen" },
+        "rotation_left": { "action": "setColorGreen" },
+        "set": {}
+      },
+      "4FH": {
+        "pressed": { "action": "setColorBlue", "threshold": 1, "value": 255 },
+        "long_pressed": {},
+        "released": {},
+        "rotation_right": { "action": "setColorBlue" },
+        "rotation_left": { "action": "setColorBlue" },
+        "set": {}
+      },
+      "4}=": {
+        "set": {}
+      }
+    }
+  },
+  "tabType": "Palette",
+  "tabUuid": "{b162b530-34f7-425f-bc4b-a40ebb5f64dc}",
+  "title": "META"
+}

@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+
+import ambit
+
+
+def main():
+    config = ambit.Configuration(ambit.FLAGS.config_paths)
+    ctrl = ambit.Controller(config)
+    ctrl.open()
+    ctrl.connect()
+    ctrl.communicate()
+    ctrl.close()
+    ctrl.print_stats()
+
+
+if __name__ == '__main__':
+    main()

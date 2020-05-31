@@ -1,0 +1,41 @@
+{
+  "app_version": "2.6.4",
+  "midiChannel": -1,
+  "module_mappings": {
+    "actionMap": {
+      "4}M": {
+        "set": {}
+      },
+      "4ls": {
+        "released": { "action": "previousFunction" }
+      },
+      "4lf": {
+        "released": { "action": "nextFunction" }
+      },
+      "4A0": {
+        "rotation_right": {},
+        "rotation_left": {},
+        "pressed": {},
+        "set": {}
+      },
+      "49d": {
+        "rotation_right": {},
+        "rotation_left": {},
+        "pressed": { "action": "executeCommand", "argv": [ "./example/scripts/unlock.sh" ] },
+        "set": {}
+      },
+      "4FH": {
+        "rotation_right": {},
+        "rotation_left": {},
+        "pressed": {},
+        "set": {}
+      },
+      "4}=": {
+        "set": {}
+      }
+    }
+  },
+  "tabType": "Home",
+  "tabUuid": "{b162b530-34f7-425f-bc4b-a40ebb5f64dc}",
+  "title": "HOME"
+}
