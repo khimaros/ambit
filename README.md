@@ -198,24 +198,26 @@ Quick install via PyPI:
 $ python3 -m pip install ambit
 ```
 
-After ambit is installed, you can run it directly:
+### Advanced
+
+After ambit is installed, you can the execute it directly.
 
 Run using a real device (CLI only):
 
 ```
-$ ambit --help
+$ ambit
 ```
 
 Run using a real device (with GUI):
 
 ```
-$ ambit_gui --help
+$ ambit_gui
 ```
 
 Run a graphical simulator:
 
 ```
-$ ambit_simulator --help
+$ ambit_simulator
 ```
 
 ### Development
