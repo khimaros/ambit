@@ -265,11 +265,15 @@ uninstall:
 	python3 -m pip uninstall -y ambit
 .PHONY: uninstall
 
-publish: deps-dev
+bdist_wheel: deps-dev
+	python3 setup.py sdist bdist_wheel
+.PHONY: bdist_wheel
+
+publish: deps-dev bdist_wheel
 	source ./venv/bin/activate && python3 -m twine upload dist/*
 .PHONY: publish
 
-publish-testpypi: deps-dev
+publish-testpypi: deps-dev bdist_wheel
 	source ./venv/bin/activate && python3 -m twine upload --repository testpypi dist/*
 .PHONY: publish-testpypi
 
@@ -279,6 +283,7 @@ clean:
 	rm -rf ./ambit.egg-info/
 	rm -rf .mypy_cache/
 	rm -f ./.coverage
+	rm -rf dist/ build/
 	rm -f example/assets/*.raw
 .PHONY: clean
 

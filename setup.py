@@ -2,8 +2,12 @@ import setuptools
 
 setuptools.setup(
     name='ambit',
-    version='0.1',
+    version='0.2.0',
     description='Take control of your Palette.',
+    long_description=(
+        'ambit is a Python library for interacting with PaletteGear and MonogramCC devices, '
+        'a graphical simulator for device-free development, and an accompanying set of '
+        'configurable end user tools and demos.'),
     url='https://github.com/khimaros/ambit',
     author='khimaros',
     packages=['ambit'],
