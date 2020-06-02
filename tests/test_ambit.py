@@ -2,7 +2,9 @@ import ambit
 import ambit.coordinates
 import ambit.fake
 import ambit.image
+import ambit.resources
 import ambit.simulator
+
 import glob
 import io
 import pygame
@@ -30,7 +32,7 @@ class AmbitIntegrationTest(unittest.TestCase):
         device.components_connected()
 
         # run the simulation
-        config = ambit.Configuration(glob.glob('./reference/configs/meta.plp'))
+        config = ambit.Configuration(ambit.resources.layout_paths('reference/meta.plp', recurse=False))
         ctrl = ambit.Controller(config, device)
         self.ctrl = ctrl
         ctrl.open()
@@ -61,7 +63,7 @@ class AmbitIntegrationTest(unittest.TestCase):
         device.components_connected()
 
         # run the simulation
-        config = ambit.Configuration(glob.glob('./example/configs/layout1/*.plp'))
+        config = ambit.Configuration(ambit.resources.layout_paths('layout1'))
         ctrl = ambit.Controller(config, device)
         self.ctrl = ctrl
         ctrl.open()
@@ -129,7 +131,7 @@ class AmbitIntegrationTest(unittest.TestCase):
         device.components_connected()
 
         # run the simulation
-        config = ambit.Configuration(glob.glob('./example/configs/layout2/*.plp'))
+        config = ambit.Configuration(ambit.resources.layout_paths('layout2'))
         ctrl = ambit.Controller(config, device)
         self.ctrl = ctrl
         ctrl.open()
@@ -230,7 +232,7 @@ class AmbitIntegrationTest(unittest.TestCase):
         device.components_connected()
 
         # run the simulation
-        config = ambit.Configuration(['./example/configs/layout4/00-test.plp'])
+        config = ambit.Configuration(ambit.resources.layout_paths('layout4'))
         ctrl = ambit.Controller(config, device)
         self.ctrl = ctrl
         ctrl.open()
@@ -422,7 +424,7 @@ class AmbitIntegrationTest(unittest.TestCase):
         self.assertEqual(3, len(device.handle.screen_images))
 
         for index in (23, 24, 25):
-            with open('./example/assets/%d.raw' % index, 'rb') as f:
+            with ambit.resources.asset_file(index) as f:
                 image_bytes = f.read()
             self.assertEqual(image_bytes, device.handle.screen_images[index])
 
@@ -660,14 +662,16 @@ class AmbitImageTest(unittest.TestCase):
         self.fd = io.BytesIO()
 
     def test_surface(self):
-        surface = ambit.image.surface('./example/assets/23.raw')
+        asset_raw_path = ambit.resources.asset_path(23)
+        surface = ambit.image.surface(asset_raw_path)
         self.assertEqual(surface.get_size(), (128, 128))
         self.assertEqual(pygame.Color(30, 31, 29, 255), surface.get_at((64, 64)))
         self.assertEqual(pygame.Color(34, 36, 33, 255), surface.get_palette_at(12))
 
     def test_convert_image(self):
-        ambit.image.convert_image('./example/assets/23.png', self.fd)
-        with open('./example/assets/23.raw', 'rb') as f:
+        asset_png_path = ambit.resources.asset_path(23, fmt='png')
+        ambit.image.convert_image(asset_png_path, self.fd)
+        with ambit.resources.asset_file(23) as f:
             self.assertEqual(f.read(), self.fd.getvalue())
 
 

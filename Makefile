@@ -43,10 +43,10 @@ out/make/virtual: out/make/deps
 virtual: out/make/virtual
 .PHONY: virtual
 
-example/assets/%.raw: example/assets/%.png out/make/virtual
+ambit/resources/assets/%.raw: ambit/resources/assets/%.png out/make/virtual
 	source ./venv/bin/activate && ./bin/ambit_image_convert $< $@
 
-assets: example/assets/23.raw example/assets/24.raw example/assets/25.raw
+assets: ambit/resources/assets/23.raw ambit/resources/assets/24.raw ambit/resources/assets/25.raw
 .PHONY: assets
 
 setup: virtual assets
@@ -88,9 +88,9 @@ test-integration-layout4: setup
 	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_layout4
 .PHONY: test-integration-layout4
 
-test-integration-layout5: setup
-	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_layout5
-.PHONY: test-integration-layout5
+test-integration-expertkit: setup
+	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_expertkit
+.PHONY: test-integration-expertkit
 
 test-message: setup
 	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitMessageTest
@@ -180,7 +180,7 @@ demoscene_simulator: setup
 .PHONY: demoscene_simulator
 
 map_hid: setup
-	source ./venv/bin/activate && bin/ambit_map_hid --debug ./example/configs/hidmap.plp
+	source ./venv/bin/activate && bin/ambit_map_hid --debug ./ambit/resources/configs/hidmap.plp
 .PHONY: map_hid
 
 map_midi: setup
@@ -202,15 +202,15 @@ simulator-prof: deps-dev setup
 .PHONY: simulator-prof
 
 simulator-layout1: setup
-	source ./venv/bin/activate && bin/ambit_simulator ./example/configs/layout1/*.plp
+	source ./venv/bin/activate && bin/ambit_simulator --layouts=layout1
 .PHONY: simulator-layout1
 
 simulator-layout2: setup
-	source ./venv/bin/activate && bin/ambit_simulator ./example/configs/layout2/*.plp
+	source ./venv/bin/activate && bin/ambit_simulator --layouts=layout2
 .PHONY: simulator-layout2
 
 simulator-layout4: setup
-	source ./venv/bin/activate && bin/ambit_simulator ./example/configs/layout4/*.plp
+	source ./venv/bin/activate && bin/ambit_simulator --layouts=layout4
 .PHONY: simulator-layout4
 
 start: setup
@@ -226,36 +226,36 @@ start-debug: setup
 .PHONY: start-debug
 
 start-layout1: setup
-	source ./venv/bin/activate && bin/ambit ./example/configs/layout1/*.plp
+	source ./venv/bin/activate && bin/ambit --layouts=layout1
 .PHONY: start-layout1
 
 start-layout2: setup
-	source ./venv/bin/activate && bin/ambit ./example/configs/layout2/*.plp
+	source ./venv/bin/activate && bin/ambit --layouts=layout2
 .PHONY: start-layout2
 
 start-layout2-gui: setup
-	source ./venv/bin/activate && bin/ambit_gui ./example/configs/layout2/*.plp
+	source ./venv/bin/activate && bin/ambit_gui --layouts=layout2
 .PHONY: start-layout2-gui
 
 start-layout3: setup
-	source ./venv/bin/activate && bin/ambit ./example/configs/layout3/*.plp
+	source ./venv/bin/activate && bin/ambit --layouts=layout3
 .PHONY: start-layout3
 
 start-layout4: setup
-	source ./venv/bin/activate && bin/ambit ./example/configs/layout4/*.plp
+	source ./venv/bin/activate && bin/ambit --layouts=layout4
 .PHONY: start-layout4
 
 start-layout4-gui: setup
-	source ./venv/bin/activate && bin/ambit_gui ./example/configs/layout4/*.plp
+	source ./venv/bin/activate && bin/ambit_gui --layouts=layout4
 .PHONY: start-layout4-gui
 
-start-layout5: setup
-	source ./venv/bin/activate && bin/ambit ./example/configs/layout5/*.plp
-.PHONY: start-layout5
+start-expertkit: setup
+	source ./venv/bin/activate && bin/ambit --layouts=expertkit
+.PHONY: start-expertkit
 
-start-layout5-gui: setup
-	source ./venv/bin/activate && bin/ambit_gui ./example/configs/layout5/*.plp
-.PHONY: start-layout5-gui
+start-expertkit-gui: setup
+	source ./venv/bin/activate && bin/ambit_gui --layouts=expertkit
+.PHONY: start-expertkit-gui
 
 install:
 	python3 -m pip install .
@@ -284,6 +284,5 @@ clean:
 	rm -rf .mypy_cache/
 	rm -f ./.coverage
 	rm -rf dist/ build/
-	rm -f example/assets/*.raw
 .PHONY: clean
 

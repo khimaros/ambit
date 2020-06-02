@@ -31,9 +31,199 @@ See also: [ROADMAP.md](ROADMAP.md).
 You may want to familiarize with ambit's high level [docs/CONCEPTS.md](docs/CONCEPTS.md)
 before diving into development or configuration.
 
+ambit has been most heavily tested on Debian, specifically the buster and bullseye
+releases. The `ambit` binary is known to run headless on RPi4 devices.
+
+### Preparation
+
+Throughout this document, commands which contain `simulator`
+do not require a physical device. In you do not wish to use a device
+at this time, you can skip to [#installation](#installation).
+
+If you wish to use ambit with a physical Palette device, you
+will need configure udev to set appropriate permissions for non-root access.
+
+A sample rules file is included in this repository for convenience. The group
+chosen for device ownership is `scanner`. If you'd prefer
+to use another group, modify `99-usb-palette.rules` before copying.
+
+Download [99-usb-palette.rules](99-usb-palette.rules) and then copy
+it to the udev rules directory:
+
+```
+$ sudo cp 99-usb-palette.rules /etc/udev/rules.d/
+```
+
+Ensure your user is in the group mentioned in the rules file:
+
+```
+$ sudo adduser $USER scanner
+```
+
+Reboot for changes to take effect.
+
+Now plug in the device and head to [#installation](#installation).
+If you are not able to connect after installation, check out
+[#troubleshooting](#troubleshooting).
+
+### Installation
+
+Install from the PyPI package repository:
+
+```
+$ python3 -m pip install ambit
+```
+
+To install from source, see [#build](#build).
+
+### Basic usage
+
+To verify our installation, it is best to launch ambit in
+debugging mode. In this mode it will respond to user input
+and log information about those inputs to the console or GUI.
+
+If you don't have a physical device configured, you can still
+run the graphical simulator:
+
+```
+$ ambit_simulator --verbose
+```
+
+For detailed simulator instructions see [#simulator](#simulator).
+
+If you have completed the steps in [#hardware](#hardware), you can
+connect ambit to a physical Palette or MonogramCC device.
+
+To connect with a command line only interface:
+
+```
+$ ambit --verbose
+```
+
+To connect with a graphical interface:
+
+```
+$ ambit_gui --verbose
+```
+
+Throughout this document, anywhere you see an `ambit` command, you can usually
+append `_gui` or `_simulator`, as in `ambit_gui` or `ambit_demoscene_simulator`.
+
+### Advanced usage
+
+To view full command line usage:
+
+```
+$ ambit --help
+```
+
+You can launch ambit with one or more built-in layouts:
+
+```
+$ ambit --layouts=expertkit
+```
+
+**N.B.** Most built-in layouts assume that your components are in
+[a specific arrangement](docs/layout.jpg).
+
+Examine [ambit/resources/layouts/expertkit/](ambit/resources/layouts/expertkit/).
+
+You can also create your own [#configuration](#configuration).
+
+### Configuration
+
+There are several configuration examples in [ambit/resources/layouts/](ambit/resources/layouts/).
+
+See [docs/CONFIG.md](docs/CONFIG.md) for the complete config reference.
+
+ambit can be launched with an ~unlimited number of configuration profiles. 
+To switch between profiles, you will need to configure appropriate bindings.
+
+### Demos
+
+Turn your device into an interactive lightshow:
+
+```
+$ ambit_demoscene
+```
+
+Press the rowwise second Button to switch between predefined demos.
+
+Press the rowwise first Button to switch Dial control mode
+between **FREQ** (red, green, blue), **PHASE** (red, green, blue), and
+**META** (width, center, and length).
+
+These values correspond to sinebow parameters. See
+https://krazydad.com/tutorials/makecolors.php for a more detailed
+explanation of these values.
+
+Turn the rowwise first three dials to adjust the respective
+values of the currently selected control mode.
+
+You can also launch in the simulator:
+
+```
+$ ambit_demoscene_simulator
+```
+
+Alternative LED demos:
+
+```
+$ ambit_lightshow
+```
+
+```
+$ ambit_lavalamp
+```
+
+### Troubleshooting
+
+If you followed the instructions in [#hardware](#hardware) and the simulator works,
+but you are still not able to connect to a physical device, you may need to
+adjust the `idVendor` and `idProduct` values in `99-usb-palette.rules`.
+
+You can determine correct values using the `lsusb` command:
+
+```
+$ lsusb
+Bus 003 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 002 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+Bus 001 Device 003: ID 0a5c:6412 Broadcom Corp. BCM2045A0
+Bus 001 Device 033: ID 16d0:09f8 MCS Palette Multi-function Device
+Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+```
+
+If you are using a newer MonogramCC device, the name shown by lsusb may differ.
+
+In the example above, **MCS Palette Multi-function Device** has
+`idVendor` and `idProduct` values of `16d0` and `09f8` respectively.
+
+Each time you change udev rules, you will need to unplug and reattach your device.
+
+If you discover a device with different IDs or you are still having difficulty connecting
+to your device after following these instructions, please create a new issue with the
+summary "New USB Device Identifiers" and include the output of `lsusb -v`.
+
+### Simulator
+
+Most ambit commands also come with a `simulator` equivalent. For example,
+`ambit` has `ambit_simulator`, `ambit_demoscene` has `ambit_demoscene_simulator`.
+
+When in the simulator, you can select a component by pressing the
+number of its index (1-9) on your keyboard (not numpad). Press 0 to deselect.
+The index for a component can be found at it's top right corner.
+In the screenshot above, the top left component `[4}m] 7 (Slider)` has
+an index of `7`.
+
+When a component is selected, use keyboard LEFT ARROW and RIGHT ARROW to
+simulate Dial rotation, SPACE to simulate button press/release, and
+UP ARROW and DOWN ARROW to simulate slider movement.
+
+The TAB key can be used to rotate the layout clockwise 90 degrees.
+
 ### Build
 
-Instructions assume a recent Debian derivative.
+These instructions assume a recent Debian derivative.
 
 Ensure you have pip and virtualenv installed:
 
@@ -61,9 +251,9 @@ $ make setup
 
 You can run ambit in a virtualenv without installing anything.
 
-The `make` commands above all take advantage of this.
+The `make` commands in [#experiment](#experiment) take advantage of this.
 
-However, if you wish to install permanently...
+If you wish to install permanently...
 
 Install ambit user-wide (pip) from source:
 
@@ -89,7 +279,7 @@ or for system-wide:
 $ sudo make uninstall
 ```
 
-### Check
+### Experiment
 
 View the list of available commands:
 
@@ -103,64 +293,9 @@ Render a simulation (no device required):
 $ make simulator
 ```
 
-When in the simulator, you can select a component by pressing the
-number of its index (1-9) on your keyboard (not numpad). Press 0 to deselect.
-The index for a component can be found at it's top right corner.
-In the screenshot above, the top left component `[4}m] 7 (Slider)` has
-an index of `7`.
+For instructions on using the simulator see [#simulator](#simulator).
 
-When a component is selected, use keyboard LEFT ARROW and RIGHT ARROW to
-simulate Dial rotation, SPACE to simulate button press/release, and
-UP ARROW and DOWN ARROW to simulate slider movement.
-
-The TAB key can be used to rotate the layout clockwise 90 degrees.
-
-### Hardware
-
-If you wish to use ambit with a physical Palette device, you
-will need configure udev for non-root access.
-
-The default group for device ownership is `scanner`. If you'd prefer
-to use another group, edit `99-usb-palette.rules` before copying.
-
-```
-$ sudo cp 99-usb-palette.rules /etc/udev/rules.d/
-```
-
-Ensure your user is in the group mentioned in the rules file:
-
-```
-$ sudo adduser $USER scanner
-```
-
-Reboot for changes to take effect.
-
-Plug the device in and then [#experiment](#experiment).
-
-If your device permissions are still incorrect, you may need to adjust
-the `idVendor` and `idProduct` values.
-
-You can determine these values with the `lsusb` command:
-
-```
-$ lsusb
-Bus 003 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
-Bus 002 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
-Bus 001 Device 003: ID 0a5c:6412 Broadcom Corp. BCM2045A0
-Bus 001 Device 033: ID 16d0:09f8 MCS Palette Multi-function Device
-Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
-```
-
-If you are using a newer MonogramCC device, the name shown by lsusb may differ.
-
-In the example above, the **MCS Palette** device has `idVendor 16d0` and `idProduct 09f8`.
-
-If you discover a new set of values, please create a new issue with a summary of
-"New USB Device Identifiers" and include the output of `lsusb -v`.
-
-### Experiment
-
-These steps assume you've already run the steps in [#hardware](#hardware).
+The steps below assume you've already run the steps in [#hardware](#hardware).
 
 Run an interactive demo on a physical Palette device:
 
@@ -177,47 +312,11 @@ $ make start-gui
 Run a demo with more complex behavior:
 
 ```
-$ make start-layout5
+$ make start-expertkit
 ```
 
 ```
-$ make start-layout5-gui
-```
-
-Most "layout" targets assume a [specific layout](docs/layout.jpg).
-
-Examine [example/configs/layout5/](example/configs/layout5/) and adjust as needed.
-
-### Install
-
-Note: currently this is not as well tested as [#build](#build).
-
-Quick install via PyPI:
-
-```
-$ python3 -m pip install ambit
-```
-
-### Advanced
-
-After ambit is installed, you can the execute it directly.
-
-Run using a real device (CLI only):
-
-```
-$ ambit
-```
-
-Run using a real device (with GUI):
-
-```
-$ ambit_gui
-```
-
-Run a graphical simulator:
-
-```
-$ ambit_simulator
+$ make start-expertkit-gui
 ```
 
 ### Development
@@ -254,55 +353,6 @@ $ make lint
 
 See also: [docs/HACKING.md](docs/HACKING.md).
 
-### Demos
-
-Turn your device into an interactive lightshow:
-
-```
-$ make demoscene
-```
-
-Press the rowwise second Button to switch between predefined demos.
-
-Press the rowwise first Button to switch Dial control mode
-between **FREQ** (red, green, blue), **PHASE** (red, green, blue), and
-**META** (width, center, and length).
-
-These values correspond to sinebow parameters. See
-https://krazydad.com/tutorials/makecolors.php for a more detailed
-explanation of these values.
-
-Turn the rowwise first three dials to adjust the respective
-values of the currently selected control mode.
-
-You can also launch in the simulator:
-
-```
-$ make demoscene_simulator
-```
-
-Alternative LED demos:
-
-```
-$ make lightshow
-```
-
-```
-$ make lavalamp
-```
-
-### Configuration
-
-See [docs/CONFIG.md](docs/CONFIG.md) for config reference.
-
-ambit can be launched with an ~unlimited number of profiles.
-
-To switch between profiles, you will need to configure appropriate bindings.
-
-There are examples demonstrating this in [example/configs/](example/configs/).
-
-Reference configuration from PaletteApp is in [reference/configs/](reference/configs/).
-
 ### MIDI / HID
 
 Map MIDI and exit:
@@ -331,29 +381,11 @@ $ ambit_image_convert <src> <dest>
 Display a Palette screen image locally:
 
 ```
-$ ambit_image_display example/assets/23.raw
+$ ambit_image_display ambit/resources/assets/23.raw
 ```
 
 ### Appendix
 
-You can define custom actions using one or more configs.
+Reference configuration from PaletteApp is in
+[ambit/resources/layouts/reference/](ambit/resources/layouts/reference/).
 
-```
-$ make simulator-layout2
-```
-
-A few sample layouts are included:
-
-```
-$ make start-layout1
-```
-
-```
-$ make start-layout2
-```
-
-For more options, run:
-
-```
-$ make help
-```

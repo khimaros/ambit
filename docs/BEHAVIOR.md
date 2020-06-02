@@ -100,7 +100,7 @@ testTrigger:
 
 These may not reflect current best practices.
 
-See [../example/configs/](../example/configs/) instead.
+See [../ambit/resources/configs/](../ambit/resources/configs/) instead.
 
 ### TRIGGER
 

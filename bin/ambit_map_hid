@@ -4,7 +4,7 @@ import ambit
 import sys
 import time
 
-config = ambit.Configuration(ambit.FLAGS.config_paths)
+config = ambit.StandardConfiguration()
 
 ctrl = ambit.Controller(config)
 

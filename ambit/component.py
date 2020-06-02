@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from ambit.configuration import Configuration
 from ambit.flags import FLAGS
 

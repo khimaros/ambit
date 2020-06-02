@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+import ambit.resources
 
 from ambit.component import Component, ComponentBehavior, ComponentLayout
 from ambit.configuration import Configuration
@@ -428,12 +428,14 @@ class Controller:
         self.clear()
 
         #for index in range(25):
-        #    self.screen_write('./reference/assets/%d.raw' % index, index)
+        #    asset_path = ambit.resources.asset_path(index)
+        #    self.screen_write(asset_path, index)
         #    self.screen_display(index)
         #    time.sleep(1)
 
         for index in (23, 24, 25):
-            self.screen_write('./example/assets/%d.raw' % index, index)
+            asset_path = ambit.resources.asset_path(index)
+            self.screen_write(asset_path, index)
             self.screen_display(index)
             time.sleep(1)
 

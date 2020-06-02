@@ -5,7 +5,7 @@ import ambit.simulator
 
 
 def main():
-    config = ambit.Configuration(ambit.FLAGS.config_paths)
+    config = ambit.StandardConfiguration()
     ctrl = ambit.simulator.Controller(config)
     ctrl.open()
     ctrl.connect()

@@ -53,5 +53,5 @@ Linux host: use wireshark to begin capture from usbmonX
 
 Win10 VM: open PaletteApp, perform some action (eg. load config, press button)
 
-Linux host: stop the capture, save to reference/capture/
+Linux host: stop the capture, save to docs/capture/
 

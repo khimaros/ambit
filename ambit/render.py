@@ -1,11 +1,10 @@
-#!/usr/bin/env python3
-
 import os
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
 import ambit
 import ambit.image
+import ambit.resources
 import pygame
 import threading
 import time
@@ -99,15 +98,12 @@ class ComponentRenderer(object):
             self.screen_display_surface = self.screen_display_surface_cache[self.component.screen_display]
 
         if not self.screen_display_surface:
-            for path_tmpl in ('./reference/assets/%d.raw', './example/assets/%d.raw'):
-                try:
-                    self.screen_display_surface = ambit.image.surface(
-                            path_tmpl % self.component.screen_display,
-                            surface_size=self.screen_display_size)
-                    break
-                except:
-                    self.screen_display_surface = None
-                    continue
+            asset_path = ambit.resources.asset_path(self.component.screen_display)
+            try:
+                self.screen_display_surface = ambit.image.surface(
+                        asset_path, surface_size=self.screen_display_size)
+            except:
+                self.screen_display_surface = None
 
         if not self.screen_display_surface:
             self.screen_display_surface = pygame.Surface(ambit.image.IMAGE_SIZE)

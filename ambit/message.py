@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from ambit.flags import FLAGS
 
 import json

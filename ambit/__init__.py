@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Take control of your Palette."""
 
 from ambit.flags import *
 from ambit.message import *
