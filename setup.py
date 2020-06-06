@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name='ambit',
-    version='0.3.0',
+    version='0.3.1',
     description='Take control of your Palette.',
     long_description=(
         '**ambit** is a Python library for interacting with PaletteGear '
