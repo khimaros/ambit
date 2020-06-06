@@ -379,7 +379,7 @@ def StandardConfiguration():
         layout_paths = ambit.resources.layout_paths(layout)
         if not layout_paths:
             print('[!] Unable to find configs for %s in %s, skipping!' % (
-                layout, ambit.resources.LAYOUT_PATH))
+                layout, ambit.resources.LAYOUTS_PATH))
             raise
         config_paths.extend(layout_paths)
     config_paths.extend(FLAGS.config_paths)
