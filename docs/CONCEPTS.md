@@ -16,7 +16,7 @@ Components are identifed by a **uid**.
 
 The unique identifier for a single Palette component.
 
-These are assigned at manufacturing time and are of the form `  [a-z]{3}`.
+These are assigned at manufacturing time and are of the form `  [a-z0-9]{3}`.
 
 The leading space is not treated as significant by ambit.
 

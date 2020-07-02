@@ -22,6 +22,8 @@
 [x] enable user input from keyboard/mouse on rendered view
 [x] spatial configuration ("button on right is pressed")
 [x] increase test coverage to 80%
+[x] interactive console for experimentation with live devices
+[x] script to reboot Palette into bootloader
 [-] full coverage of upstream mediaMap bindings
 [-] support upstream keyMap bindings
 [-] document configuration options

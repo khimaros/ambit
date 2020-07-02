@@ -3,6 +3,7 @@ from ambit.flags import FLAGS
 import ambit.resources
 
 import json
+import sys
 
 from typing import Any, Callable, Dict, List, Tuple
 
@@ -378,9 +379,9 @@ def StandardConfiguration():
     for layout in FLAGS.layouts:
         layout_paths = ambit.resources.layout_paths(layout)
         if not layout_paths:
-            print('[!] Unable to find configs for %s in %s, skipping!' % (
+            print('[!] Unable to find layout %s in %s, exiting!' % (
                 layout, ambit.resources.LAYOUTS_PATH))
-            raise
+            sys.exit(1)
         config_paths.extend(layout_paths)
     config_paths.extend(FLAGS.config_paths)
     return Configuration(config_paths)

@@ -9,4 +9,6 @@ native="bin/ambit_$1"
 
 sed 's/ambit\.simulator\.Controller/ambit.Controller/g; /import ambit\.simulator/d' "$simulator" > "$native"
 
+chmod +x "$native"
+
 echo "[*] Converted ${simulator} to ${native}!"

@@ -147,9 +147,9 @@ Turn your device into an interactive lightshow:
 $ ambit_demoscene
 ```
 
-Press the rowwise second Button to switch between predefined demos.
+Press the rowwise first Button to switch between predefined demos.
 
-Press the rowwise first Button to switch Dial control mode
+Press the rowwise second Button to switch Dial control mode
 between **FREQ** (red, green, blue), **PHASE** (red, green, blue), and
 **META** (width, center, and length).
 

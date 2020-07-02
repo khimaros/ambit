@@ -32,7 +32,8 @@ class DemoSinebow:
 class DemoScene:
     def __init__(self):
         self.control = 'FREQ'
-        self.lock = threading.Lock()
+        self.color_lock = threading.Lock()
+        self.demo_lock = threading.Lock()
         self.demo = None
         self.available_demos = [
             # Known visually appealing settings:
@@ -82,9 +83,9 @@ class DemoScene:
         ]
 
     def make_colors(self):
-        self.lock.acquire()
+        self.color_lock.acquire()
         self.colors = list(self.demo.make_colors())
-        self.lock.release()
+        self.color_lock.release()
 
     def set_phase1(self, value):
         print('[D] Setting DemoScene phase1 to:', value)
@@ -128,28 +129,32 @@ class DemoScene:
     def set_center(self, value):
         print('[D] Setting DemoScene center to:', value)
         self.available_demos[0].center = value
-        self.ctrl.screen_string('C: %d' % self.center)
+        self.ctrl.screen_string('C: %d' % value)
         self.switch_demo(0)
 
     def set_width(self, value):
         print('[D] Setting DemoScene width to:', value)
         self.available_demos[0].width = value
-        self.ctrl.screen_string('W: %d' % self.width)
+        self.ctrl.screen_string('W: %d' % value)
         self.switch_demo(0)
 
     def set_length(self, value):
-        self.available_demos[0].length = value or 1
-        print('[D] Setting DemoScene length to:', self.length)
-        self.ctrl.screen_string('L: %d' % self.length)
+        value = value or 1
+        self.available_demos[0].length = value
+        print('[D] Setting DemoScene length to:', value)
+        self.ctrl.screen_string('L: %d' % value)
         self.switch_demo(0)
 
     def switch_demo(self, value):
+        self.demo_lock.acquire()
         if self.demo == self.available_demos[value]:
+            self.demo_lock.release()
             return
         self.demo = self.available_demos[value]
-        self.make_colors()
         print('[D] Switching demo to:', self.demo.title)
         self.ctrl.screen_string('DEMO: %s' % self.demo.title)
+        self.demo_lock.release()
+        self.make_colors()
 
     def switch_control(self, value):
         _, control = value
@@ -190,6 +195,9 @@ class DemoScene:
 
         ## DIAL 0
 
+        if len(dials) < 1:
+            return
+
         component = dials[0]
         component.reset()
         behavior = ambit.ComponentBehavior(
@@ -200,6 +208,9 @@ class DemoScene:
 
         ## DIAL 1
 
+        if len(dials) < 2:
+            return
+
         component = dials[1]
         component.reset()
         behavior = ambit.ComponentBehavior(
@@ -209,6 +220,9 @@ class DemoScene:
         component.set_callback(ambit.Configuration.INPUT_SET, name2, behavior, callback2, None)
 
         ## DIAL 2
+
+        if len(dials) < 3:
+            return
 
         component = dials[2]
         component.reset()
@@ -221,16 +235,12 @@ class DemoScene:
     def configure_callbacks(self):
         buttons = self.ctrl.layout.search(kind=ambit.Component.KIND_BUTTON, rowwise=True)
 
-        component = buttons[0]
-        component.reset()
-        behavior = ambit.ComponentBehavior(
-                behavior=ambit.ComponentBehavior.CYCLE,
-                items=['FREQ', 'PHASE', 'META'],
-                threshold=1, loop=True, nested=True)
-        behavior.finalize()
-        component.set_callback(ambit.Configuration.INPUT_RELEASED, 'SwitchControl', behavior, self.switch_control, None)
+        ### BUTTON 0
 
-        component = buttons[1]
+        if len(buttons) < 1:
+            return
+
+        component = buttons[0]
         component.reset()
         behavior = ambit.ComponentBehavior(
                 behavior=ambit.ComponentBehavior.CYCLE,
@@ -238,6 +248,20 @@ class DemoScene:
                 threshold=1, loop=True, default=0)
         behavior.finalize()
         component.set_callback(ambit.Configuration.INPUT_RELEASED, 'SwitchDemo', behavior, self.switch_demo, None)
+
+        ### BUTTON 1
+
+        if len(buttons) < 2:
+            return
+
+        component = buttons[1]
+        component.reset()
+        behavior = ambit.ComponentBehavior(
+                behavior=ambit.ComponentBehavior.CYCLE,
+                items=['FREQ', 'PHASE', 'META'],
+                threshold=1, loop=True, nested=True)
+        behavior.finalize()
+        component.set_callback(ambit.Configuration.INPUT_RELEASED, 'SwitchControl', behavior, self.switch_control, None)
 
     def run(self):
         config = ambit.Configuration()
@@ -254,21 +278,21 @@ class DemoScene:
         self.switch_control((0, 'FREQ'))
         self.switch_demo(0)
 
-        num_components = len(ctrl.layout.connected())
         prev_length = 0
         try:
             while not ctrl.shutdown_event.is_set():
                 num_components = len(ctrl.layout.connected())
-
-                self.lock.acquire()
+                self.demo_lock.acquire()
                 if prev_length != self.demo.length:
                     pixel_colors = list(range(0, num_components))
                     prev_length = self.demo.length
+                self.demo_lock.release()
                 while len(pixel_colors) < num_components:
                     pixel_colors.insert(pixel_colors[0] - 1)
+                self.color_lock.acquire()
                 pixel_colors = list(map(lambda x: (x + 1) % len(self.colors), pixel_colors))
                 pixels = [self.colors[pixel_colors[x % len(pixel_colors)]] for x in range(num_components)]
-                self.lock.release()
+                self.color_lock.release()
 
                 min_x, min_y, max_x, max_y = ctrl.layout.extrema()
                 w = abs(max_x - min_x) + 1

@@ -235,7 +235,7 @@ class Handle:
         return len(data)
 
     def bulkRead(self, ep, size, timeout=0):
-        data = ''
+        data = memoryview(bytes())
         start_time = time.time()
         while (not timeout) or (time.time() - start_time) * 1000 < timeout:
             try:
@@ -244,7 +244,7 @@ class Handle:
             except queue.Empty:
                 pass
         if ambit.FLAGS.debug:
-            print('[F] Handle.bulkRead()', ep, size, timeout, '=>', data)
+            print('[F] Handle.bulkRead()', ep, size, timeout, '=>', ambit.message_decode(data))
         if not data:
             raise usb.USBError('no data to read')
         return data

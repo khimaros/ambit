@@ -1,5 +1,7 @@
 SHELL := /bin/bash
 
+.DEFAULT_GOAL := help
+
 .SHELLFLAGS := -eu -o pipefail -c
 
 .ONESHELL:
@@ -11,13 +13,25 @@ MAKEFLAGS += --no-builtin-rules
 
 SOURCES := ./ambit/ ./tools/ ./bin/ ./tests/
 
+
 help:
 	@echo -e "Available commands:\n"
 	@sed -n '/^[a-zA-Z0-9_\-][a-zA-Z0-9_.\-]*:/s/:.*//p' < Makefile | sed 's/^/    /' | sort -u
 	@echo
+.PHONY: help
 
 venv/bin/activate:
 	python3 -m venv ./venv
+
+zipapp-dist:
+	mkdir -p ./out/zipapp-dist/
+	rm -rf ./out/zipapp-dist/
+	python3 -m pip install . -r ./requirements.txt --target ./out/zipapp-dist/
+.PHONY: zipapp-dist
+
+out/zipapp/%: zipapp-dist
+	mkdir -p $(@D)
+	shiv -p "/usr/bin/env python3" --site-packages ./out/zipapp-dist/ --compressed -o $@ -c $(notdir $@)
 
 out/make/deps: venv/bin/activate requirements.txt
 	mkdir -p $(@D)
@@ -40,6 +54,10 @@ out/make/virtual: out/make/deps
 	source ./venv/bin/activate && python3 -m pip install -e .
 	touch $@
 
+extract_reference_assets: docs/captures/core-update-images.pcapng
+	./tools/extract_reference_assets.sh docs/captures/core-update-images.pcapng ambit/resources/assets/reference/
+.PHONY: extract_reference_assets
+
 virtual: out/make/virtual
 .PHONY: virtual
 
@@ -51,6 +69,9 @@ assets: ambit/resources/assets/23.raw ambit/resources/assets/24.raw ambit/resour
 
 setup: virtual assets
 .PHONY: setup
+
+setup-dev: virtual assets deps-dev
+.PHONY: setup-dev
 
 test: setup
 	source ./venv/bin/activate && python3 tests/test_ambit.py
@@ -168,8 +189,44 @@ lavalamp_simulator: setup
 	source ./venv/bin/activate && bin/ambit_lavalamp_simulator
 .PHONY: lavalamp_simulator
 
+bin/ambit_console: bin/ambit_console_simulator setup
+	./tools/convert_simulator_bin.sh console
+
+console: bin/ambit_console setup-dev
+	source ./venv/bin/activate && bin/ambit_console
+.PHONY: console
+
+console_simulator: setup-dev
+	source ./venv/bin/activate && bin/ambit_console_simulator
+.PHONY: console_simulator
+
 bin/ambit_demoscene: bin/ambit_demoscene_simulator setup
 	./tools/convert_simulator_bin.sh demoscene
+
+out/firmware/palette-firmware.psh: docs/captures/firmware-update-push.pcapng
+	mkdir -p $(@D)
+	tshark -r $< -2 -T fields \
+		-e usb.data_fragment -Y usb.data_fragment \
+		-R 'usb.dst == "1.55.0" or usb.src == "1.55.0" and usb.bmRequestType == 0x21 and usb.data_fragment[0] == 0x01' \
+		| sed 's/^.\{64\}//' | sed 's/.\{32\}$$//' | tr -d '\n' > $@
+
+out/firmware/palette-firmware.bin: out/firmware/palette-firmware.psh
+	xxd -r -ps < $< > $@
+
+out/firmware/palette-firmware.hex: out/firmware/palette-firmware.bin
+	./tools/bin_to_ihx.py $< $@
+
+out/firmware/palette-firmware.asm: out/firmware/palette-firmware.hex
+	avr-objdump -m avr:5 -s -j .sec1 -d $< > $@
+
+out/firmware/palette-firmware.elf: out/firmware/palette-firmware.bin
+	avr-objcopy -I binary -O elf32-avr $< $@
+
+flash_firmware: out/firmware/palette-firmware.hex
+	dfu-programmer at90usb1286 erase
+	dfu-programmer at90usb1286 flash $<
+	dfu-programmer at90usb1286 launch
+.PHONY: flash_firmware
 
 demoscene: bin/ambit_demoscene setup
 	source ./venv/bin/activate && bin/ambit_demoscene
@@ -186,6 +243,10 @@ map_hid: setup
 map_midi: setup
 	source ./venv/bin/activate && bin/ambit_map_midi
 .PHONY: map_midi
+
+reboot_bootloader: setup
+	source ./venv/bin/activate && bin/ambit_reboot_bootloader
+.PHONY: reboot_bootloader
 
 push_assets: setup
 	source ./venv/bin/activate && bin/ambit_push_assets

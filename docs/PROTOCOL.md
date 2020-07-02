@@ -203,7 +203,11 @@ RECV <= BULK IN (layout/input)
 
 #### {"start":1}
 
-Indicate to the device to prepare for user input.
+Request the current layout and begin receiving input events.
+
+#### {"stop":1}
+
+Stop receiving input events.
 
 #### {"hidmap":[]}
 
@@ -250,6 +254,30 @@ bind dial left rotation to left-ctrl + left-alt + left arrow
 ```
 {"i":2,"s":[{"c":2,"k":80,"m":5,"r":8,"rp":8}],"t":0},
 ```
+
+#### {"boot":1}
+
+Put the device into bootloader mode.
+
+#### {"screen_ready":1}
+
+Device will send `{"scr_ready":1}` if the screen is ready.
+
+#### {"send_version":1}
+
+Device will send the current core and screen versions:
+
+`{"version_core":"1.3.1","version_screen":0}`
+
+#### {"set_version_screen":<int>}
+
+Sets the `version_screen` number to the specified integer.
+
+Unknown effect. This is sent during image push by PaletteApp.
+
+#### {"contrast":<int>}
+
+Seems to cause the device to reset without dropping USB connection.
 
 #### {"joymap":[]}
 
@@ -318,3 +346,34 @@ Uses same format as config with two exceptions.
 - uuids are prefixed with two spaces `[0x20,0x20]` in protocol
 
 See [LAYOUT.md](LAYOUT.md) for more detail.
+
+### OTHER SIGNIFICANT STRINGS
+
+#### Likely commands
+
+force_reboot
+reset_reboot_log
+enable_debug
+
+rotate
+timeout
+
+#### Likely parameters
+
+debug
+error
+info
+
+#### Likely internal values
+
+err_id
+setting_flags_1
+debug_return
+reboot_count
+led_array
+
+reboot_historical_MCUSR
+DEBUG_ENABLE
+SETTING_FLAGS_1
+MCUSR_SAVED
+

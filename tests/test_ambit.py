@@ -32,7 +32,7 @@ class AmbitIntegrationTest(unittest.TestCase):
         device.components_connected()
 
         # run the simulation
-        config = ambit.Configuration(ambit.resources.layout_paths('reference/meta.plp', recurse=False))
+        config = ambit.Configuration(['./reference/layouts/meta.plp'])
         ctrl = ambit.Controller(config, device)
         self.ctrl = ctrl
         ctrl.open()

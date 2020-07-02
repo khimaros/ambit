@@ -23,7 +23,11 @@ def message_decode(data: memoryview) -> Tuple[List[str], bytes]:
         extra_data = data_bytes[extra_data_start:]
         data_bytes = data_bytes[:extra_data_start]
 
-    read_str = data_bytes.decode()
+    try:
+        read_str = data_bytes.decode()
+    except:
+        print('[!] Failed to decode bytes:', data_bytes);
+        return [], extra_data
 
     # FIXME: this is an awful, terrible hack which will fail as soon
     # as it encounters }{ inside of a string.
@@ -33,7 +37,7 @@ def message_decode(data: memoryview) -> Tuple[List[str], bytes]:
         messages = json.loads(json_data)
     except json.decoder.JSONDecodeError as err:
         if FLAGS.debug:
-            print('[!] DECODE FAILED:', json_data, err)
+            print('[!] DECODE FAILED:', json_data, "--", err)
         messages = []
 
     return messages, extra_data

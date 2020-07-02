@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+
+import ambit
+import IPython
+
+
+def main():
+    config = ambit.Configuration()
+    config.profile.title = ''
+    config.profile.icon = ambit.Configuration.ICON_BLANK
+
+    ctrl = ambit.Controller(config)
+    ctrl.open()
+    ctrl.connect()
+
+    IPython.embed()
+
+    ctrl.close()
+    ctrl.print_stats()
+
+
+if __name__ == '__main__':
+    main()

@@ -4,7 +4,9 @@ import glob
 import os
 
 
-RESOURCES_PATH = os.path.realpath(os.path.join(os.path.dirname(__file__), 'resources'))
+PACKAGE_PATH = os.path.realpath(os.path.dirname(__file__))
+
+RESOURCES_PATH = os.path.join(PACKAGE_PATH, 'resources')
 
 LAYOUTS_PATH = os.path.join(RESOURCES_PATH, 'layouts')
 

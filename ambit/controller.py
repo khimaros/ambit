@@ -65,9 +65,17 @@ class Controller:
     KEEPALIVE_TIMEOUT_SECONDS = 5
     SCREEN_RESET_SECONDS = 3
 
-    USB_INTERFACE_ID = 0
-    USB_ENDPOINT_BULK_IN = 0x84
-    USB_ENDPOINT_BULK_OUT = 0x05
+    USB_INTERFACE_ID = 0                # Interface for CDC endpoint.
+    USB_ENDPOINT_CONTROL_IN = 0x80      # CDC Control - EP 0 IN
+    USB_ENDPOINT_CONTROL_OUT = 0x00     # CDC Control - EP 0 OUT
+    USB_ENDPOINT_INTERRUPT_IN = 0x83    # CDC Interrupt - EP 3 IN
+    USB_ENDPOINT_BULK_IN = 0x84         # CDC Data (Bulk) - EP 4 IN
+    USB_ENDPOINT_BULK_OUT = 0x05        # CDC Data (Bulk) - EP 5 OUT
+    USB_REQUEST_TYPE_IN = 0xa1          # CDC Control - Request 161
+    USB_REQUEST_TYPE_OUT = 0x21         # CDC Control - Request 33
+    USB_SETUP_REQUEST_HANDSHAKE = 0x20  # 32
+    USB_SETUP_REQUEST_EMPTY_IN = 0x21   # 33
+    USB_SETUP_REQUEST_EMPTY_OUT = 0x22  # 34
 
     # Magic string used during control handshake.
     HANDSHAKE_BYTES = [0xe0, 0x93, 0x04, 0x00, 0x00, 0x00, 0x00, 0x08]
@@ -118,7 +126,7 @@ class Controller:
     }
 
     device: Device
-    handle: Any
+    handle: usb.legacy.DeviceHandle
     config: Configuration
     layout: ComponentLayout
     lock: threading.Lock
@@ -202,22 +210,36 @@ class Controller:
     # TODO: turn these hex values into descriptive constants
     def control_handshake(self):
         # URB_CONTROL in (empty)
-        self.handle.controlMsg(0xa1, 0x21, 7)
+        self.handle.controlMsg(
+                Controller.USB_REQUEST_TYPE_IN,
+                Controller.USB_SETUP_REQUEST_EMPTY_IN, 7)
 
         # URB_CONTROL out (handshake)
-        self.handle.controlMsg(0x21, 0x20, Controller.HANDSHAKE_BYTES)
+        self.handle.controlMsg(
+                Controller.USB_REQUEST_TYPE_OUT,
+                Controller.USB_SETUP_REQUEST_HANDSHAKE,
+                Controller.HANDSHAKE_BYTES)
 
         # URB_CONTROL in (empty)
-        self.handle.controlMsg(0xa1, 0x21, 7)
+        self.handle.controlMsg(
+                Controller.USB_REQUEST_TYPE_IN,
+                Controller.USB_SETUP_REQUEST_EMPTY_IN, 7)
 
         # URB_CONTROL out (empty)
-        self.handle.controlMsg(0x21, 0x22, 0)
+        self.handle.controlMsg(
+                Controller.USB_REQUEST_TYPE_OUT,
+                Controller.USB_SETUP_REQUEST_EMPTY_OUT, 0)
 
         # URB_CONTROL out (handshake)
-        self.handle.controlMsg(0x21, 0x20, Controller.HANDSHAKE_BYTES)
+        self.handle.controlMsg(
+                Controller.USB_REQUEST_TYPE_OUT,
+                Controller.USB_SETUP_REQUEST_HANDSHAKE,
+                Controller.HANDSHAKE_BYTES)
 
         # URB_CONTROL in (empty)
-        self.handle.controlMsg(0xa1, 0x21, 7)
+        self.handle.controlMsg(
+                Controller.USB_REQUEST_TYPE_IN,
+                Controller.USB_SETUP_REQUEST_EMPTY_IN, 7)
 
     def bulk_write_worker(self):
         while not self.shutdown_event.is_set():
@@ -232,19 +254,20 @@ class Controller:
     def bulk_write_messages(self, messages):
         if not messages:
             return
-        if FLAGS.debug:
-            print("[@] BULK WRITE:", messages)
         data = message_encode(messages)
         self.write_queue.put(data, Controller.QUEUE_TIMEOUT_SECONDS)
 
     def bulk_write(self, data):
+        if FLAGS.debug:
+            print("[@] BULK WRITE:", data.tobytes().decode())
         try:
             self.handle.bulkWrite(
                     Controller.USB_ENDPOINT_BULK_OUT,
                     data,
                     Controller.BULK_WRITE_TIMEOUT_MS)
-        except usb.USBError:
+        except usb.USBError as exc:
             self.failed_writes += 1
+            self.process_usb_error(exc)
         else:
             self.lock.acquire()
             self.last_write_time = time.time()
@@ -262,14 +285,20 @@ class Controller:
                     Controller.USB_ENDPOINT_BULK_IN,
                     Controller.BULK_READ_SIZE_BYTES,
                     Controller.BULK_READ_TIMEOUT_MS)
-        except usb.USBError:
-            self.failed_reads +=  1
+        except usb.USBError as exc:
+            self.failed_reads += 1
+            self.process_usb_error(exc)
             return []
         else:
-            messages, _ = message_decode(data)
             if FLAGS.debug:
-                print("[@] BULK READ:", messages)
+                print("[@] BULK READ:", data.tobytes().decode())
+            messages, _ = message_decode(data)
             return messages
+
+    def process_usb_error(self, exc):
+        if exc.errno == 19:
+            print('[0] Lost connection to device, shutting down.')
+            self.join()
 
     def start(self):
         self.bulk_write_messages([
@@ -418,6 +447,27 @@ class Controller:
             flip = 1 if component.flip else 0
             messages.append({"flip": [ {"i": component.index, "m": flip } ]})
         self.bulk_write_messages(messages)
+
+    def boot(self):
+        if len(self.layout.connected()) > 1:
+            print('[0] Skipping boot, too many components connected.')
+            return
+
+        self.check()
+
+        self.screen_display(0)
+
+        self.screen_string("Bootloader")
+
+        time.sleep(1)
+
+        self.bulk_write_messages([ { "boot": 1 } ])
+
+        print('[0] Rebooting to bootloader...')
+
+        self.wait()
+
+        time.sleep(1)
 
     def configure_images(self):
         if len(self.layout.connected()) > 1:
@@ -738,16 +788,19 @@ class Controller:
 
     def join(self):
         self.shutdown_event.set()
-        if self.bulk_read_thread.is_alive():
-            self.bulk_read_thread.join()
-        if self.bulk_write_thread.is_alive():
-            self.bulk_write_thread.join()
-        if self.screen_string_thread.is_alive():
-            self.screen_string_thread.join()
-        if self.led_thread.is_alive():
-            self.led_thread.join()
-        if self.keepalive_thread.is_alive():
-            self.keepalive_thread.join()
+        all_threads = (
+                self.bulk_read_thread,
+                self.bulk_write_thread,
+                self.screen_string_thread,
+                self.led_thread,
+                self.keepalive_thread,
+        )
+        for thread in all_threads:
+            if thread.is_alive():
+                try:
+                    thread.join()
+                except:
+                    pass
 
     def spawn(self):
         self.bulk_read_thread.start()
