@@ -16,21 +16,26 @@ from typing import Any, Callable, Dict, List, Tuple
 
 
 class Device:
-    def __init__(self, device_id, interface_id) :
+    def __init__(self, device_id, interface_id, index=0):
         vendor_id, product_id = device_id.split(':')
         self.vendor_id = int(vendor_id, 16)
         self.product_id = int(product_id, 16)
         self.interface_id = interface_id
+        self.index = index
         self._device = self._discover()
         self.handle = None
 
     def _discover(self):
+        index = 0
         buses = usb.busses()
         for bus in buses:
             for device in bus.devices:
                 if device.idVendor == self.vendor_id:
                     if device.idProduct == self.product_id:
-                        return device
+                        if index == int(self.index):
+                            print('[0] Choosing device at USB discovery index %d.' % index)
+                            return device
+                        index += 1
         return None
 
     def open(self):
@@ -79,6 +84,8 @@ class Controller:
 
     # Magic string used during control handshake.
     HANDSHAKE_BYTES = [0xe0, 0x93, 0x04, 0x00, 0x00, 0x00, 0x00, 0x08]
+
+    FIRMWARE_VERSION_SLIDER_FIXED = '1.3.2'
 
     BEHAVIOR_KIND_DEFAULTS = {
             Component.KIND_SLIDER: ComponentBehavior(
@@ -133,9 +140,10 @@ class Controller:
     shutdown_event: threading.Event
     write_queue: queue.Queue
     action_callback_map: Dict[str, Callable]
+    version_core: str
 
     def __init__(self, config=None, device=None):
-        self.device = device or Device(FLAGS.device, Controller.USB_INTERFACE_ID)
+        self.device = device or Device(FLAGS.device, Controller.USB_INTERFACE_ID, FLAGS.device_index)
         self.handle = None
         self.config = config
         self.layout = ComponentLayout(orientation=config.profile.orientation)
@@ -154,6 +162,7 @@ class Controller:
         self.led_thread = threading.Thread(target=self.led_worker)
         self.keepalive_thread = threading.Thread(target=self.keepalive_worker)
 
+        self.version_core = ''
         self.failed_writes = 0
         self.failed_reads = 0
         self.dropped_screen_strings = 0
@@ -305,6 +314,11 @@ class Controller:
             {"start": 1},
         ])
 
+    def stop(self):
+        self.bulk_write_messages([
+            {"stop": 1},
+        ])
+
     def check(self):
         self.bulk_write_messages([
             {"check": 1},
@@ -421,7 +435,7 @@ class Controller:
 
     def screen_display(self, index):
         self.bulk_write_messages([
-            {"screen_display": index}
+            {"screen_display": index},
         ])
         component = self.layout.find_component(1)
         component.screen_display = index
@@ -436,6 +450,8 @@ class Controller:
 
         self.clear()
 
+        self.send_version()
+
         print("[0] Waiting for initial layout ...")
         self.wait_for_layout()
 
@@ -447,6 +463,11 @@ class Controller:
             flip = 1 if component.flip else 0
             messages.append({"flip": [ {"i": component.index, "m": flip } ]})
         self.bulk_write_messages(messages)
+
+    def send_version(self):
+        self.bulk_write_messages([
+            {"send_version": 1},
+        ])
 
     def boot(self):
         if len(self.layout.connected()) > 1:
@@ -732,10 +753,12 @@ class Controller:
         self.process_layout(self.layout.layout_dict)
 
     def process_bulk_message(self, message):
-        if "l" in message:
-            self.process_layout(message["l"])
-        elif "in" in message:
-            self.process_input(message["in"])
+        if 'l' in message:
+            self.process_layout(message['l'])
+        elif 'in' in message:
+            self.process_input(message['in'])
+        elif 'version_core' in message:
+            self.process_version_core(message['version_core'])
 
     def process_layout(self, layout_dict):
         self.layout.update(layout_dict)
@@ -766,6 +789,14 @@ class Controller:
             component = self.layout.find_component(i)
             if not component:
                 return
+
+            # Workaround bug in firmware version 1.3.1 which causes slider
+            # inputs to stop at 254 instead of 255.
+            if self.version_core < Controller.FIRMWARE_VERSION_SLIDER_FIXED:
+                if component.kind == Component.KIND_SLIDER:
+                    if v[0] == 254:
+                        v[0] = 255
+
             component.previous_values = component.values
             component.values = v
             for input_type in component.determine_input_types():
@@ -773,6 +804,10 @@ class Controller:
                 value = component.invoke_callback(input_type)
                 self.print_input(component, input_type, value, raw_value)
                 self.display_input(component, input_type, value, raw_value)
+
+    def process_version_core(self, version):
+        print('[0] Detected Palette firmware version', version)
+        self.version_core = version
 
     def wait_for_layout(self):
         while not self.layout:

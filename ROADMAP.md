@@ -27,18 +27,20 @@
 [-] full coverage of upstream mediaMap bindings
 [-] support upstream keyMap bindings
 [-] document configuration options
-[ ] long running mode for midi map for layout/profile changes
+[-] increase type annotations to 15%
+[ ] plugin system for component callback behavior
 [ ] support long_pressed input type for buttons and dials
 [ ] support pressed_rotation_{right,left} input type for dials
-[ ] switch to an interrupt/callback driven system for rendering (performance)
-[ ] shared peristent state across components (eg. two buttons change same value)
-[ ] add blocking/nonblocking mode to all major write operations
 [ ] when config uses `rotation`, map to `rotation_left` and `rotation_right`
-[ ] support for MIDI output profile (eg. control LEDs)
-[ ] plugin system for component callback behavior
-[ ] CLI based simulator, or just stick with tests?
+[ ] long running mode for midi map for layout/profile changes
+[ ] add blocking/nonblocking mode to all major write operations
+[ ] shared peristent state across components (eg. two buttons change same value)
 [ ] move callbacks to subclass or equiv
 [ ] code hygiene: make more use of private attributes on classes
+[ ] increase test coverage to 90%
+[ ] switch to an interrupt/callback driven system for rendering (performance)
 [ ] graphical configuration interface
+[ ] support for MIDI output profile (eg. control LEDs)
 [ ] switch to subpackages and `extras_require` for render/simulator and dev deps
+[ ] CLI based simulator, or just stick with tests?
 ```

@@ -154,6 +154,7 @@ class Handle:
         self.messages = {}
         self.leds = {}
         self.phase = None
+        self.version = '1.3.1'
         self.screen_display = None
         self.screen_string = None
         self.screen_images = {}
@@ -177,12 +178,20 @@ class Handle:
             self.screen_string = message['screen_string']
         if 'screen_write' in message:
             self._process_screen_write(message['screen_write'], data)
+        if 'send_version' in message:
+            self._process_send_version()
 
     def _process_check(self, check):
         #print('[F] Processing check message')
         if self.phase == Handle.PHASE_READY:
             self._set_phase(Handle.PHASE_INPUT)
         self._last_check = time.time()
+
+    def _process_send_version(self):
+        self.write_messages([{
+            'version_core': self.version,
+            'version_screen': 0,
+        }])
 
     def _process_screen_write(self, index, image_bytes):
         fd = io.BytesIO(image_bytes)
@@ -287,6 +296,7 @@ class Device:
         self.device_id = device_id
         self.interface_id = interface_id
         self._layout = {}
+        self._version = ''
         self.values = {}
         self.kinds = {}
         self.handle = None
@@ -304,6 +314,10 @@ class Device:
         self.handle._layout = layout
         self.handle._write_layout()
 
+    # NOTE: Has no effect if called after open()
+    def set_version_core(self, version):
+        self._version = version
+
     def initialize_values(self, component):
         if not component:
             return
@@ -317,6 +331,8 @@ class Device:
         if ambit.FLAGS.verbose:
             print('[F] Device.open()')
         self.handle = Handle(self._layout)
+        if self._version:
+            self.handle.version = self._version
         return self.handle
 
     def input_pressed(self, index):
@@ -351,11 +367,19 @@ class Device:
         if self.kinds[index] != ambit.Component.KIND_SLIDER:
             return
         values = self.values[index]
-        if values[0] == 255:
+
+        # With firmware versions <= 1.3.1, the maximum slider
+        # value is 254 instead of 255.
+        max_slider_value = 255
+        if self.handle.version < ambit.Controller.FIRMWARE_VERSION_SLIDER_FIXED:
+            max_slider_value = 254
+
+        if values[0] == max_slider_value:
             return
         values[0] += amount
-        if values[0] > 255:
-            values[0] = 255
+        if values[0] > max_slider_value:
+            values[0] = max_slider_value
+
         self.values[index] = values
         self.handle.write_messages([
                 {'in': [{'i': index, 'v': values}]},

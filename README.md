@@ -120,15 +120,65 @@ $ ambit --help
 You can launch ambit with one or more built-in layouts:
 
 ```
-$ ambit --layouts=expertkit
+$ ambit --layouts=prokit
 ```
 
 **N.B.** Most built-in layouts assume that your components are in
 [a specific arrangement](docs/layout.jpg).
 
-Examine [ambit/resources/layouts/expertkit/](ambit/resources/layouts/expertkit/).
+Examine [ambit/resources/layouts/prokit/](ambit/resources/layouts/prokit/).
 
 You can also create your own [#configuration](#configuration).
+
+### Flashing
+
+NOTE: Before flashing, you must detach all attached components except
+for the base.
+
+Palette devices use the DFU protocol for firmware upload.
+
+To place the device in DFU mode, attach and run:
+
+```
+$ ambit_reboot_bootloader
+```
+
+Once the device is in DFU mode, you can use a tool such as `dfu-programmer` to
+write any firmware to the device.
+
+You can place factory firmware files in the directory `reference/firmware/`
+with the file format `firmware-reference-<version>.hex` and flash using:
+
+```
+$ make flash-reference-<version>
+```
+
+See [docs/HACKING.md](docs/HACKING.md) for instructions on how to capture
+factory firmware images.
+
+Be aware that newer versions (1.4.6136 as of this writing) have much lower
+LED and screen write performance compared with version 1.3.1.
+
+There are convenience targets defined for LED optimized (`flash-ledopt`)
+and latest version (`flash`).
+
+NOTE: version 1.3.1 has a bug which causes the slider range to be
+limited to 1-254 instead of 1-255. We work around this issue in ambit by
+aliasing the 254 value to 255 when this firmware version is detected.
+
+### Pushing Assets
+
+NOTE: Before pushing assets, you must detach all attached components
+except for the base.
+
+Custom screen images can be added to the device.
+
+Add screen images (PNG files) to `ambit/resources/assets/`
+and run a one-time conversion/push to the device:
+
+```
+$ make push_assets
+```
 
 ### Configuration
 
@@ -297,6 +347,13 @@ For instructions on using the simulator see [#simulator](#simulator).
 
 The steps below assume you've already run the steps in [#hardware](#hardware).
 
+You can append flags to ambit execution using the `AMBIT_FLAGS`
+Makefile variable.
+
+```
+$ make AMBIT_FLAGS=--debug simulator
+```
+
 Run an interactive demo on a physical Palette device:
 
 ```
@@ -312,11 +369,11 @@ $ make start-gui
 Run a demo with more complex behavior:
 
 ```
-$ make start-expertkit
+$ make start-prokit
 ```
 
 ```
-$ make start-expertkit-gui
+$ make start-prokit-gui
 ```
 
 ### Development

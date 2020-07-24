@@ -257,19 +257,21 @@ bind dial left rotation to left-ctrl + left-alt + left arrow
 
 #### {"boot":1}
 
-Put the device into bootloader mode.
+Put the device into DFU bootloader mode.
 
-#### {"screen_ready":1}
+#### {"screen\_ready":1}
 
-Device will send `{"scr_ready":1}` if the screen is ready.
+Device will send `{"scr_ready":1}` in response.
 
-#### {"send_version":1}
+Presumably this is only true if the screen is "ready".
+
+#### {"send\_version":1}
 
 Device will send the current core and screen versions:
 
 `{"version_core":"1.3.1","version_screen":0}`
 
-#### {"set_version_screen":<int>}
+#### {"set\_version\_screen":<int>}
 
 Sets the `version_screen` number to the specified integer.
 
@@ -308,6 +310,8 @@ Configure component LED colors.
 Used only for sliders. Should use `"m":0` when male connector is on top or left, otherwise `"m":1`
 
 #### {"check":1}
+
+Sent as a keepalive. Possible device reduces power when not received for some time.
 
 ### DEVICE => HOST
 
@@ -351,9 +355,9 @@ See [LAYOUT.md](LAYOUT.md) for more detail.
 
 #### Likely commands
 
-force_reboot
-reset_reboot_log
-enable_debug
+force\_reboot
+reset\_reboot\_log
+enable\_debug
 
 rotate
 timeout
@@ -366,14 +370,14 @@ info
 
 #### Likely internal values
 
-err_id
-setting_flags_1
-debug_return
-reboot_count
-led_array
+err\_id
+setting\_flags\_1
+debug\_return
+reboot\_count
+led\_array
 
-reboot_historical_MCUSR
-DEBUG_ENABLE
-SETTING_FLAGS_1
-MCUSR_SAVED
+reboot\_historical\_MCUSR
+DEBUG\_ENABLE
+SETTING\_FLAGS\_1
+MCUSR\_SAVED
 

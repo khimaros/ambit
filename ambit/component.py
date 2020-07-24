@@ -8,6 +8,10 @@ import copy
 from typing import Any, Callable, Dict, List, Tuple
 
 
+def sorted_rowwise(components):
+    return sorted(components, key=lambda x: (-x.slot[1], x.slot[0]))
+
+
 class ComponentInvocation(object):
     input_type: int
     action_name: str
@@ -490,6 +494,9 @@ class ComponentLayout(object):
 
         return orientation % 360
 
+    def rowwise_index(component):
+        pass
+
     def connected(self):
         components = []
         for index in sorted(self.components_index):
@@ -498,7 +505,7 @@ class ComponentLayout(object):
         return components
 
     def connected_rowwise(self):
-        return sorted(self.connected(), key=lambda x: x.slot)
+        return sorted_rowwise(self.connected())
 
     # TODO: this does not need to be a class method
     def parse_query(self, query):
@@ -543,6 +550,7 @@ class ComponentLayout(object):
             if len(components) < select:
                 # FIXME: need better error handling for this case.
                 print('[!] Query contains select with invalid index.')
+                return []
             components = [components[select - 1]]
         #print('[D] Query %s matched components: %s' % (query, components))
         return components
@@ -562,7 +570,7 @@ class ComponentLayout(object):
                 continue
             components.append(component)
         if rowwise:
-            components = sorted(components, key=lambda x: x.slot)
+            components = sorted_rowwise(components)
         return components
 
     def find_component(self, index):

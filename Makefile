@@ -11,6 +11,14 @@ SHELL := /bin/bash
 MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
+AMBIT_FLAGS =
+#AMBIT_FLAGS += --layouts=expertkit
+#AMBIT_FLAGS += --config_paths=/path/to/*.plp
+#AMBIT_FLAGS += --device=DEAD:BEEF
+#AMBIT_FLAGS += --device_index=0
+#AMBIT_FLAGS += --debug
+#AMBIT_FLAGS += --verbose
+
 SOURCES := ./ambit/ ./tools/ ./bin/ ./tests/
 
 
@@ -20,18 +28,9 @@ help:
 	@echo
 .PHONY: help
 
+
 venv/bin/activate:
 	python3 -m venv ./venv
-
-zipapp-dist:
-	mkdir -p ./out/zipapp-dist/
-	rm -rf ./out/zipapp-dist/
-	python3 -m pip install . -r ./requirements.txt --target ./out/zipapp-dist/
-.PHONY: zipapp-dist
-
-out/zipapp/%: zipapp-dist
-	mkdir -p $(@D)
-	shiv -p "/usr/bin/env python3" --site-packages ./out/zipapp-dist/ --compressed -o $@ -c $(notdir $@)
 
 out/make/deps: venv/bin/activate requirements.txt
 	mkdir -p $(@D)
@@ -54,12 +53,13 @@ out/make/virtual: out/make/deps
 	source ./venv/bin/activate && python3 -m pip install -e .
 	touch $@
 
+virtual: out/make/virtual
+.PHONY: virtual
+
+
 extract_reference_assets: docs/captures/core-update-images.pcapng
 	./tools/extract_reference_assets.sh docs/captures/core-update-images.pcapng ambit/resources/assets/reference/
 .PHONY: extract_reference_assets
-
-virtual: out/make/virtual
-.PHONY: virtual
 
 ambit/resources/assets/%.raw: ambit/resources/assets/%.png out/make/virtual
 	source ./venv/bin/activate && ./bin/ambit_image_convert $< $@
@@ -67,11 +67,13 @@ ambit/resources/assets/%.raw: ambit/resources/assets/%.png out/make/virtual
 assets: ambit/resources/assets/23.raw ambit/resources/assets/24.raw ambit/resources/assets/25.raw
 .PHONY: assets
 
+
 setup: virtual assets
 .PHONY: setup
 
 setup-dev: virtual assets deps-dev
 .PHONY: setup-dev
+
 
 test: setup
 	source ./venv/bin/activate && python3 tests/test_ambit.py
@@ -92,6 +94,10 @@ test-integration-layout_query: setup
 test-integration-layout_changed: setup
 	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_layout_changed
 .PHONY: test-integration-layout_changed
+
+test-integration-slider_range: setup
+	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_slider_range_{broken,fixed}
+.PHONY: test-integration-slider_range
 
 test-integration-reference_meta: setup
 	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_reference_meta
@@ -159,49 +165,6 @@ coverage-report: deps-dev setup
 	xdg-open ./out/coverage/htmlcov/index.html
 .PHONY: coverage-report
 
-benchmark: setup
-	source ./venv/bin/activate && bin/ambit_benchmark
-.PHONY: benchmark
-
-bin/ambit_lightshow: bin/ambit_lightshow_simulator setup
-	./tools/convert_simulator_bin.sh lightshow
-
-lightshow: bin/ambit_lightshow setup
-	source ./venv/bin/activate && bin/ambit_lightshow
-.PHONY: lightshow
-
-lightshow-gui: setup
-	source ./venv/bin/activate && bin/ambit_lightshow_gui
-.PHONY: lightshow-gui
-
-lightshow_simulator: setup
-	source ./venv/bin/activate && bin/ambit_lightshow_simulator
-.PHONY: lightshow_simulator
-
-bin/ambit_lavalamp: bin/ambit_lavalamp_simulator setup
-	./tools/convert_simulator_bin.sh lavalamp
-
-lavalamp: bin/ambit_lavalamp setup
-	source ./venv/bin/activate && bin/ambit_lavalamp
-.PHONY: lavalamp
-
-lavalamp_simulator: setup
-	source ./venv/bin/activate && bin/ambit_lavalamp_simulator
-.PHONY: lavalamp_simulator
-
-bin/ambit_console: bin/ambit_console_simulator setup
-	./tools/convert_simulator_bin.sh console
-
-console: bin/ambit_console setup-dev
-	source ./venv/bin/activate && bin/ambit_console
-.PHONY: console
-
-console_simulator: setup-dev
-	source ./venv/bin/activate && bin/ambit_console_simulator
-.PHONY: console_simulator
-
-bin/ambit_demoscene: bin/ambit_demoscene_simulator setup
-	./tools/convert_simulator_bin.sh demoscene
 
 out/firmware/palette-firmware.psh: docs/captures/firmware-update-push.pcapng
 	mkdir -p $(@D)
@@ -222,101 +185,194 @@ out/firmware/palette-firmware.asm: out/firmware/palette-firmware.hex
 out/firmware/palette-firmware.elf: out/firmware/palette-firmware.bin
 	avr-objcopy -I binary -O elf32-avr $< $@
 
-flash_firmware: out/firmware/palette-firmware.hex
+flash-reference-%: reference/firmware/firmware-%.hex
 	dfu-programmer at90usb1286 erase
 	dfu-programmer at90usb1286 flash $<
 	dfu-programmer at90usb1286 launch
-.PHONY: flash_firmware
+.PHONY: flash-reference-%
 
-demoscene: bin/ambit_demoscene setup
-	source ./venv/bin/activate && bin/ambit_demoscene
-.PHONY: demoscene
+flash_teensy-reference-%: reference/firmware/firmware-%.hex
+	teensy_loader_cli --mcu=at90usb1286 -v $<
+.PHONY: flash_teensy-reference-%
 
-demoscene_simulator: setup
-	source ./venv/bin/activate && bin/ambit_demoscene_simulator
-.PHONY: demoscene_simulator
+flash: flash-reference-1.4.6136
+.PHONY: flash
 
-map_hid: setup
-	source ./venv/bin/activate && bin/ambit_map_hid --debug ./ambit/resources/configs/hidmap.plp
-.PHONY: map_hid
+flash_teensy: flash_teensy-reference-1.4.6136
+.PHONY: flash_teensy
 
-map_midi: setup
-	source ./venv/bin/activate && bin/ambit_map_midi
-.PHONY: map_midi
+flash-ledopt: flash-reference-1.3.1
+.PHONY: flash-ledopt
+
+flash_teensy-ledopt: flash_teensy-reference-1.3.1
+.PHONY: flash_teensy-ledopt
+
+
+benchmark: setup
+	source ./venv/bin/activate && bin/ambit_benchmark $(AMBIT_FLAGS)
+.PHONY: benchmark
+
+bin/ambit_console: bin/ambit_console_simulator setup
+	./tools/convert_simulator_bin.sh console
+
+console: bin/ambit_console setup-dev
+	source ./venv/bin/activate && bin/ambit_console $(AMBIT_FLAGS)
+.PHONY: console
+
+console_simulator: setup-dev
+	source ./venv/bin/activate && bin/ambit_console_simulator $(AMBIT_FLAGS)
+.PHONY: console_simulator
 
 reboot_bootloader: setup
-	source ./venv/bin/activate && bin/ambit_reboot_bootloader
+	source ./venv/bin/activate && bin/ambit_reboot_bootloader $(AMBIT_FLAGS)
 .PHONY: reboot_bootloader
 
 push_assets: setup
-	source ./venv/bin/activate && bin/ambit_push_assets
+	source ./venv/bin/activate && bin/ambit_push_assets $(AMBIT_FLAGS)
 .PHONY: push_assets
 
+
+bin/ambit_lightshow: bin/ambit_lightshow_simulator setup
+	./tools/convert_simulator_bin.sh lightshow
+
+lightshow: bin/ambit_lightshow setup
+	source ./venv/bin/activate && bin/ambit_lightshow $(AMBIT_FLAGS)
+.PHONY: lightshow
+
+lightshow-gui: setup
+	source ./venv/bin/activate && bin/ambit_lightshow_gui $(AMBIT_FLAGS)
+.PHONY: lightshow-gui
+
+lightshow_simulator: setup
+	source ./venv/bin/activate && bin/ambit_lightshow_simulator $(AMBIT_FLAGS)
+.PHONY: lightshow_simulator
+
+bin/ambit_lavalamp: bin/ambit_lavalamp_simulator setup
+	./tools/convert_simulator_bin.sh lavalamp
+
+lavalamp: bin/ambit_lavalamp setup
+	source ./venv/bin/activate && bin/ambit_lavalamp $(AMBIT_FLAGS)
+.PHONY: lavalamp
+
+lavalamp_simulator: setup
+	source ./venv/bin/activate && bin/ambit_lavalamp_simulator $(AMBIT_FLAGS)
+.PHONY: lavalamp_simulator
+
+bin/ambit_demoscene: bin/ambit_demoscene_simulator setup
+	./tools/convert_simulator_bin.sh demoscene
+
+demoscene: bin/ambit_demoscene setup
+	source ./venv/bin/activate && bin/ambit_demoscene $(AMBIT_FLAGS)
+.PHONY: demoscene
+
+demoscene_simulator: setup
+	source ./venv/bin/activate && bin/ambit_demoscene_simulator $(AMBIT_FLAGS)
+.PHONY: demoscene_simulator
+
+
+map_hid: setup
+	source ./venv/bin/activate && bin/ambit_map_hid --debug ./ambit/resources/configs/hidmap.plp $(AMBIT_FLAGS)
+.PHONY: map_hid
+
+map_midi: setup
+	source ./venv/bin/activate && bin/ambit_map_midi $(AMBIT_FLAGS)
+.PHONY: map_midi
+
+
 simulator: setup
-	source ./venv/bin/activate && bin/ambit_simulator --verbose
+	source ./venv/bin/activate && bin/ambit_simulator --verbose $(AMBIT_FLAGS)
 .PHONY: simulator
 
 simulator-prof: deps-dev setup
 	mkdir -p ./out/mtprof/
-	source ./venv/bin/activate && python3 -m mtprof -o ./out/mtprof/simulator.prof bin/ambit_simulator --verbose
+	source ./venv/bin/activate && python3 -m mtprof -o ./out/mtprof/simulator.prof bin/ambit_simulator --verbose $(AMBIT_FLAGS)
 	source ./venv/bin/activate && snakeviz ./out/mtprof/simulator.prof
 .PHONY: simulator-prof
 
 simulator-layout1: setup
-	source ./venv/bin/activate && bin/ambit_simulator --layouts=layout1
+	source ./venv/bin/activate && bin/ambit_simulator --layouts=layout1 $(AMBIT_FLAGS)
 .PHONY: simulator-layout1
 
 simulator-layout2: setup
-	source ./venv/bin/activate && bin/ambit_simulator --layouts=layout2
+	source ./venv/bin/activate && bin/ambit_simulator --layouts=layout2 $(AMBIT_FLAGS)
 .PHONY: simulator-layout2
 
 simulator-layout4: setup
-	source ./venv/bin/activate && bin/ambit_simulator --layouts=layout4
+	source ./venv/bin/activate && bin/ambit_simulator --layouts=layout4 $(AMBIT_FLAGS)
 .PHONY: simulator-layout4
 
+simulator-expertkit: setup
+	source ./venv/bin/activate && bin/ambit_simulator --layouts=expertkit $(AMBIT_FLAGS)
+.PHONY: simulator-expertkit
+
+simulator-prokit: setup
+	source ./venv/bin/activate && bin/ambit_simulator --layouts=prokit $(AMBIT_FLAGS)
+.PHONY: simulator-prokit
+
+simulator-prokit-rowwise: setup
+	source ./venv/bin/activate && bin/ambit_simulator --layouts=prokit-rowwise $(AMBIT_FLAGS)
+.PHONY: simulator-prokit-rowwise
+
 start: setup
-	source ./venv/bin/activate && bin/ambit --verbose
+	source ./venv/bin/activate && bin/ambit --verbose $(AMBIT_FLAGS)
 .PHONY: start
 
 start-gui: setup
-	source ./venv/bin/activate && bin/ambit_gui --verbose
+	source ./venv/bin/activate && bin/ambit_gui --verbose $(AMBIT_FLAGS)
 .PHONY: start-gui
 
 start-debug: setup
-	source ./venv/bin/activate && bin/ambit --verbose --debug
+	source ./venv/bin/activate && bin/ambit --verbose --debug $(AMBIT_FLAGS)
 .PHONY: start-debug
 
 start-layout1: setup
-	source ./venv/bin/activate && bin/ambit --layouts=layout1
+	source ./venv/bin/activate && bin/ambit --layouts=layout1 $(AMBIT_FLAGS)
 .PHONY: start-layout1
 
 start-layout2: setup
-	source ./venv/bin/activate && bin/ambit --layouts=layout2
+	source ./venv/bin/activate && bin/ambit --layouts=layout2 $(AMBIT_FLAGS)
 .PHONY: start-layout2
 
 start-layout2-gui: setup
-	source ./venv/bin/activate && bin/ambit_gui --layouts=layout2
+	source ./venv/bin/activate && bin/ambit_gui --layouts=layout2 $(AMBIT_FLAGS)
 .PHONY: start-layout2-gui
 
 start-layout3: setup
-	source ./venv/bin/activate && bin/ambit --layouts=layout3
+	source ./venv/bin/activate && bin/ambit --layouts=layout3 $(AMBIT_FLAGS)
 .PHONY: start-layout3
 
 start-layout4: setup
-	source ./venv/bin/activate && bin/ambit --layouts=layout4
+	source ./venv/bin/activate && bin/ambit --layouts=layout4 $(AMBIT_FLAGS)
 .PHONY: start-layout4
 
 start-layout4-gui: setup
-	source ./venv/bin/activate && bin/ambit_gui --layouts=layout4
+	source ./venv/bin/activate && bin/ambit_gui --layouts=layout4 $(AMBIT_FLAGS)
 .PHONY: start-layout4-gui
 
 start-expertkit: setup
-	source ./venv/bin/activate && bin/ambit --layouts=expertkit
+	source ./venv/bin/activate && bin/ambit --layouts=expertkit $(AMBIT_FLAGS)
 .PHONY: start-expertkit
 
 start-expertkit-gui: setup
-	source ./venv/bin/activate && bin/ambit_gui --layouts=expertkit
+	source ./venv/bin/activate && bin/ambit_gui --layouts=expertkit $(AMBIT_FLAGS)
 .PHONY: start-expertkit-gui
+
+start-prokit: setup
+	source ./venv/bin/activate && bin/ambit --layouts=prokit $(AMBIT_FLAGS)
+.PHONY: start-prokit
+
+start-prokit-gui: setup
+	source ./venv/bin/activate && bin/ambit_gui --layouts=prokit $(AMBIT_FLAGS)
+.PHONY: start-prokit-gui
+
+start-prokit-rowwise: setup
+	source ./venv/bin/activate && bin/ambit --layouts=prokit-rowwise $(AMBIT_FLAGS)
+.PHONY: start-prokit-rowwise
+
+start-prokit-rowwise-gui: setup
+	source ./venv/bin/activate && bin/ambit_gui --layouts=prokit-rowwise $(AMBIT_FLAGS)
+.PHONY: start-prokit-rowwise-gui
+
 
 install:
 	python3 -m pip install .
@@ -326,9 +382,20 @@ uninstall:
 	python3 -m pip uninstall -y ambit
 .PHONY: uninstall
 
+
 bdist_wheel: deps-dev
 	python3 setup.py sdist bdist_wheel
 .PHONY: bdist_wheel
+
+zipapp-dist:
+	mkdir -p ./out/zipapp-dist/
+	rm -rf ./out/zipapp-dist/
+	python3 -m pip install . -r ./requirements.txt --target ./out/zipapp-dist/
+.PHONY: zipapp-dist
+
+out/zipapp/%: zipapp-dist
+	mkdir -p $(@D)
+	shiv -p "/usr/bin/env python3" --site-packages ./out/zipapp-dist/ --compressed -o $@ -c $(notdir $@)
 
 publish: deps-dev bdist_wheel
 	source ./venv/bin/activate && python3 -m twine upload dist/*
@@ -337,6 +404,7 @@ publish: deps-dev bdist_wheel
 publish-testpypi: deps-dev bdist_wheel
 	source ./venv/bin/activate && python3 -m twine upload --repository testpypi dist/*
 .PHONY: publish-testpypi
+
 
 clean:
 	rm -rf ./venv/

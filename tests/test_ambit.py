@@ -461,6 +461,70 @@ class AmbitIntegrationTest(unittest.TestCase):
         self.assertEqual(0, ctrl.dropped_leds)
         self.assertEqual(0, ctrl.dropped_screen_strings)
 
+    # TODO: replace test_slider_range_{broken,fixed} with a parameterized
+    # test suite which exercises the entire suite for both versions.
+    def test_slider_range_broken(self):
+        ambit.FLAGS.debug = True
+        ambit.FLAGS.verbose = True
+
+        # configure the device behavior
+        device = ambit.fake.Device('DEAD:BEEF', 'XYZ')
+
+        device.set_version_core('1.3.1')
+
+        device.components_connected(ambit.fake.DEFAULT_COMPONENT_LAYOUT)
+
+        # run the simulation
+        config = ambit.Configuration()
+        config.profile.icon = ambit.Configuration.ICON_PALETTE
+        ctrl = ambit.Controller(config, device)
+
+        self.ctrl = ctrl
+        ctrl.open()
+        ctrl.connect()
+
+        ctrl.wait_for_layout()
+
+        device.input_slide_up(7, 254)
+
+        time.sleep(1)
+
+        self.assertEqual([255,0,0,0,0,0,0,0], ctrl.layout.find_component(7).values)
+
+    def test_slider_range_fixed(self):
+        ambit.FLAGS.debug = True
+        ambit.FLAGS.verbose = True
+
+        # configure the device behavior
+        device = ambit.fake.Device('DEAD:BEEF', 'XYZ')
+
+        device.set_version_core('1.4.6136')
+
+        device.components_connected(ambit.fake.DEFAULT_COMPONENT_LAYOUT)
+
+        # run the simulation
+        config = ambit.Configuration()
+        config.profile.icon = ambit.Configuration.ICON_PALETTE
+        ctrl = ambit.Controller(config, device)
+
+        self.ctrl = ctrl
+        ctrl.open()
+        ctrl.connect()
+
+        ctrl.wait_for_layout()
+
+        device.input_slide_up(7, 254)
+
+        time.sleep(1)
+
+        self.assertEqual([254,0,0,0,0,0,0,0], ctrl.layout.find_component(7).values)
+
+        device.input_slide_up(7, 1)
+
+        time.sleep(1)
+
+        self.assertEqual([255,0,0,0,0,0,0,0], ctrl.layout.find_component(7).values)
+
     def test_default_input(self):
         ambit.FLAGS.debug = True
         ambit.FLAGS.verbose = True

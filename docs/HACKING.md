@@ -57,7 +57,7 @@ Win10 VM: open PaletteApp, perform some action (eg. load config, press button)
 
 Linux host: stop the capture, save to docs/capture/
 
-## Screen image reversing
+## Screen image capture
 
 Start a Wireshark capture.
 
@@ -66,6 +66,22 @@ Begin a screen image update in the Win10 VM.
 Save the capture to `docs/captures/core-update-images.pcapng`
 
 Run `make extract_reference_assets`
+
+## Firmware capture
+
+The simplest way to retrieve firmware images is to install the
+PaletteApp and retrieve the `firmware.hex` file from the
+Program Files directory.
+
+You can also capture the firmware with Wireshark.
+
+Start a Wireshark capture.
+
+Begin a firmware flash in the Win10 VM.
+
+Save the capture to `docs/captures/firmware-update-push.pcapng`.
+
+Run `make out/firmware/palette-firmware.hex`
 
 ## Firmware reversing
 
