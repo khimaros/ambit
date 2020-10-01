@@ -29,7 +29,8 @@ class AmbitIntegrationTest(unittest.TestCase):
         # configure the device behavior
         device = ambit.fake.Device('DEAD:BEEF', 'XYZ')
 
-        device.components_connected()
+        # start with several components connected.
+        device.components_connected(ambit.fake.LAYOUT_DEFAULT_EXPERTKIT)
 
         # run the simulation
         config = ambit.Configuration(['./reference/layouts/meta.plp'])
@@ -53,17 +54,25 @@ class AmbitIntegrationTest(unittest.TestCase):
         self.assertEqual(1, len(device.handle.messages['check']))
         self.assertEqual("META", device.handle.screen_string)
 
-    def test_layout1(self):
+    def test_orientation_change(self):
+        # TODO: need a test that loads a config with "orientation" defined as 180,
+        # rotates another 90 for a final rotation of 270. the actionMap should
+        # contain both uid based and query (incl. slot) based references and the
+        # callbacks should still work correctly after rotation.
+        pass
+
+    def test_multifunction_buttons(self):
         ambit.FLAGS.debug = True
         ambit.FLAGS.verbose = False
 
         # configure the device behavior
         device = ambit.fake.Device('DEAD:BEEF', 'XYZ')
 
-        device.components_connected()
+        # start with several components connected.
+        device.components_connected(ambit.fake.LAYOUT_DEFAULT_EXPERTKIT)
 
         # run the simulation
-        config = ambit.Configuration(ambit.resources.layout_paths('layout1'))
+        config = ambit.Configuration(ambit.resources.layout_paths('multifunction-buttons'))
         ctrl = ambit.Controller(config, device)
         self.ctrl = ctrl
         ctrl.open()
@@ -121,17 +130,18 @@ class AmbitIntegrationTest(unittest.TestCase):
         self.assertEqual(0, ctrl.dropped_leds)
         self.assertEqual(0, ctrl.dropped_screen_strings)
 
-    def test_layout2(self):
+    def test_multifunction_dial(self):
         ambit.FLAGS.debug = True
         ambit.FLAGS.verbose = False
 
         # configure the device behavior
         device = ambit.fake.Device('DEAD:BEEF', 'XYZ')
 
-        device.components_connected()
+        # start with several components connected.
+        device.components_connected(ambit.fake.LAYOUT_DEFAULT_EXPERTKIT)
 
         # run the simulation
-        config = ambit.Configuration(ambit.resources.layout_paths('layout2'))
+        config = ambit.Configuration(ambit.resources.layout_paths('multifunction-dial'))
         ctrl = ambit.Controller(config, device)
         self.ctrl = ctrl
         ctrl.open()
@@ -222,17 +232,18 @@ class AmbitIntegrationTest(unittest.TestCase):
         self.assertEqual(0, ctrl.dropped_leds)
         self.assertEqual(0, ctrl.dropped_screen_strings)
 
-    def test_layout4(self):
+    def test_behaviors(self):
         ambit.FLAGS.debug = True
         ambit.FLAGS.verbose = False
 
         # configure the device behavior
         device = ambit.fake.Device('DEAD:BEEF', 'XYZ')
 
-        device.components_connected()
+        # start with several components connected.
+        device.components_connected(ambit.fake.LAYOUT_DEFAULT_PROKIT)
 
         # run the simulation
-        config = ambit.Configuration(ambit.resources.layout_paths('layout4'))
+        config = ambit.Configuration(ambit.resources.layout_paths('test-behaviors'))
         ctrl = ambit.Controller(config, device)
         self.ctrl = ctrl
         ctrl.open()
@@ -240,122 +251,171 @@ class AmbitIntegrationTest(unittest.TestCase):
 
         ctrl.wait_for_layout()
 
-        # the 00-test config sets the orientation to 180 degrees,
-        # and we rotate another 90 degrees here to test 270 orientation.
-        ctrl.rotate(90)
-        time.sleep(2)
-        self.assertEqual(270, ctrl.layout.find_component(1).orientation)
-        self.assertEqual(270, ctrl.layout.find_component(2).orientation)
-        self.assertEqual(180, ctrl.layout.find_component(3).orientation)
+        # [0] Component attached: Base (1) 00000 (0, 0) - 0 - False ::
+        # [0] Component attached: Dial (2) C4@ (0, -1) - 0 - False ::
+        # [0] Component attached: Dial (3) D5o (1, -1) - 270 - False ::
+        # [0] Component attached: Button (4) B$; (1, 0) - 180 - False ::
+        # [0] Component attached: Button (5) 8S$ (1, 1) - 180 - False ::
+        # [0] Component attached: Dial (6) 6pZ (0, -2) - 0 - False ::
+        # [0] Component attached: Dial (7) 6RD (-1, -1) - 90 - False ::
+        # [0] Component attached: Button (8) 8a4 (-1, 0) - 180 - False ::
+        # [0] Component attached: Slider (9) 8W( (-2, 0) - 90 - True ::
+        # [0] Component attached: Slider (10) 8V$ (-2, -2) - 0 - False ::
+        # [0] Component attached: Slider (11) Ak~ (2, -1) - 270 - False ::
+        # [0] Component attached: Dial (12) 6om (2, 1) - 180 - False ::
+        # [0] Component attached: Slider (13) 8Uq (1, -2) - 0 - False ::
+        # [0] Component attached: Button (14) 8R+ (-1, 1) - 180 - False ::
+        # [0] Component attached: Dial (15) 6J@ (-2, 1) - 90 - False ::
+
+        self.assertEqual(0, ctrl.layout.find_component(1).orientation)
+        self.assertEqual(0, ctrl.layout.find_component(2).orientation)
+        self.assertEqual(270, ctrl.layout.find_component(3).orientation)
         self.assertEqual(180, ctrl.layout.find_component(4).orientation)
-        self.assertEqual(0, ctrl.layout.find_component(5).orientation)
-        self.assertEqual(90, ctrl.layout.find_component(6).orientation)
-        self.assertEqual(0, ctrl.layout.find_component(7).orientation)
-        self.assertEqual(90, ctrl.layout.find_component(8).orientation)
+        self.assertEqual(180, ctrl.layout.find_component(5).orientation)
+        self.assertEqual(0, ctrl.layout.find_component(6).orientation)
+        self.assertEqual(90, ctrl.layout.find_component(7).orientation)
+        self.assertEqual(180, ctrl.layout.find_component(8).orientation)
+        self.assertEqual(90, ctrl.layout.find_component(9).orientation)
+        self.assertEqual(0, ctrl.layout.find_component(10).orientation)
+        self.assertEqual(270, ctrl.layout.find_component(11).orientation)
+        self.assertEqual(180, ctrl.layout.find_component(12).orientation)
+        self.assertEqual(0, ctrl.layout.find_component(13).orientation)
+        self.assertEqual(180, ctrl.layout.find_component(14).orientation)
+        self.assertEqual(90, ctrl.layout.find_component(15).orientation)
 
         self.assertEqual((0,0), ctrl.layout.find_component(1).slot)
-        self.assertEqual((1,0), ctrl.layout.find_component(2).slot)
-        self.assertEqual((1,1), ctrl.layout.find_component(3).slot)
-        self.assertEqual((1,2), ctrl.layout.find_component(4).slot)
-        self.assertEqual((1,-1), ctrl.layout.find_component(5).slot)
-        self.assertEqual((0,-1), ctrl.layout.find_component(6).slot)
-        self.assertEqual((0,-2), ctrl.layout.find_component(7).slot)
-        self.assertEqual((0,1), ctrl.layout.find_component(8).slot)
+        self.assertEqual((0,-1), ctrl.layout.find_component(2).slot)
+        self.assertEqual((1,-1), ctrl.layout.find_component(3).slot)
+        self.assertEqual((1,0), ctrl.layout.find_component(4).slot)
+        self.assertEqual((1,1), ctrl.layout.find_component(5).slot)
+        self.assertEqual((0,-2), ctrl.layout.find_component(6).slot)
+        self.assertEqual((-1,-1), ctrl.layout.find_component(7).slot)
+        self.assertEqual((-1,0), ctrl.layout.find_component(8).slot)
+        self.assertEqual((-2,0), ctrl.layout.find_component(9).slot)
+        self.assertEqual((-2,-2), ctrl.layout.find_component(10).slot)
+        self.assertEqual((2,-1), ctrl.layout.find_component(11).slot)
+        self.assertEqual((2,1), ctrl.layout.find_component(12).slot)
+        self.assertEqual((1,-2), ctrl.layout.find_component(13).slot)
+        self.assertEqual((-1,1), ctrl.layout.find_component(14).slot)
+        self.assertEqual((-2,1), ctrl.layout.find_component(15).slot)
 
-        self.assertEqual(True, ctrl.layout.find_component(4).flip)
-        self.assertEqual(False, ctrl.layout.find_component(7).flip)
+        self.assertEqual(True, ctrl.layout.find_component(9).flip)
+        self.assertEqual(False, ctrl.layout.find_component(10).flip)
 
-        self.assertEqual(8, len(ctrl.layout.connected()))
+        self.assertEqual(15, len(ctrl.layout.connected()))
 
-        time.sleep(1)
+        # [0] Bound callback pressed testAccumulate (ACCUMULATE) to component 6RD
+        # [0] Bound callback rotation_left testAccumulate (ACCUMULATE) to component 6RD
+        # [0] Bound callback rotation_right testAccumulate (ACCUMULATE) to component 6RD
+        # [0] Bound callback released testCycle (CYCLE) to component 8a4
+        # [0] Bound callback released testAccumulate (ACCUMULATE) to component 8R+
+        # [0] Bound callback set testAccumulate (ACCUMULATE) to component 8V$
+        # [0] Bound callback set testTrigger (TRIGGER) to component 8W(
+        # [0] Bound callback rotation_left testCycle (CYCLE) to component 6J@
+        # [0] Bound callback rotation_right testCycle (CYCLE) to component 6J@
+        # [0] Bound callback rotation_left testDelta (DELTA) to component C4@
+        # [0] Bound callback rotation_right testDelta (DELTA) to component C4@
+        # [0] Bound callback pressed testTrigger (TRIGGER) to component 6pZ
+        # [0] Bound callback rotation_left testAccumulate (ACCUMULATE) to component 6pZ
+        # [0] Bound callback rotation_right testAccumulate (ACCUMULATE) to component 6pZ
+        # [0] Bound callback pressed testTrigger (TRIGGER) to component D5o
+        # [0] Bound callback set testTrigger (TRIGGER) to component D5o
+        # [0] Bound callback set testDelta (DELTA) to component 8Uq
+        # [0] Bound callback pressed testTrigger (TRIGGER) to component B$;
+        # [0] Bound callback released testTrigger (TRIGGER) to component B$;
+        # [0] Bound callback released testAccumulate (ACCUMULATE) to component 8S$
+        # [0] Bound callback set testCycle (CYCLE) to component Ak~
+        # [0] Bound callback set testAccumulate (ACCUMULATE) to component 6om
+
+        time.sleep(2)
 
         self.assertEqual(1, len(device.handle.messages['check']))
         self.assertEqual("TEST", device.handle.screen_string)
-        self.assertEqual([0, 0], device.handle.messages['screen_display'])
+        self.assertEqual([0], device.handle.messages['screen_display'])
 
         time.sleep(2)
 
         # Dial / ACCUMULATE
-        device.input_rotation_left(5, 8)
-        device.input_rotation_left(5, 8)
+        device.input_rotation_left(7, 8)
+        device.input_rotation_left(7, 8)
         time.sleep(0.5)
         self.assertEqual("A: -2", device.handle.screen_string)
-        device.input_pressed(5)
-        device.input_released(5)
+        device.input_pressed(7)
+        device.input_released(7)
         time.sleep(0.5)
         self.assertEqual("A: 998", device.handle.screen_string)
-        device.input_rotation_right(5, 8)
-        device.input_rotation_right(5, 8)
+        device.input_rotation_right(7, 8)
+        device.input_rotation_right(7, 8)
         time.sleep(0.5)
         self.assertEqual("A: 1000", device.handle.screen_string)
 
         # Slider / TRIGGER
-        device.input_slide_up(7, 4)
-        device.input_slide_up(7, 16)
-        device.input_slide_up(7, 128)
-        device.input_slide_up(7, 64)
-        device.input_slide_up(7, 64)
+        device.input_slide_up(9, 4)
+        device.input_slide_up(9, 16)
+        device.input_slide_up(9, 128)
+        device.input_slide_up(9, 64)
+        device.input_slide_up(9, 64)
         time.sleep(1)
         self.assertEqual("T: 255", device.handle.screen_string)
 
         # Slider / CYCLE
-        device.input_slide_up(4, 255)
+        device.input_slide_up(11, 255)
         time.sleep(0.5)
         self.assertEqual("C: SIX", device.handle.screen_string)
-        device.input_slide_down(4, 40)
+        device.input_slide_down(11, 40)
         time.sleep(0.5)
         self.assertEqual("C: FIVE", device.handle.screen_string)
-        device.input_slide_down(4, 40)
+        device.input_slide_down(11, 40)
         time.sleep(0.5)
         self.assertEqual("C: FOUR", device.handle.screen_string)
-        device.input_slide_down(4, 40)
+        device.input_slide_down(11, 40)
         time.sleep(0.5)
         self.assertEqual("C: THREE", device.handle.screen_string)
-        device.input_slide_down(4, 40)
+        device.input_slide_down(11, 40)
         time.sleep(0.5)
         self.assertEqual("C: TWO", device.handle.screen_string)
-        device.input_slide_down(4, 55)
+        device.input_slide_down(11, 55)
         time.sleep(0.5)
         self.assertEqual("C: ONE", device.handle.screen_string)
 
         # Button / TRIGGER
-        device.input_pressed(8)
+        device.input_pressed(4)
         time.sleep(0.5)
         self.assertEqual("T: 1", device.handle.screen_string)
-        device.input_released(8)
+        device.input_released(4)
         time.sleep(0.5)
         self.assertEqual("T: 0", device.handle.screen_string)
 
         # Button / CYCLE
-        device.input_pressed(6)
-        device.input_released(6)
+        device.input_pressed(8)
+        device.input_released(8)
         time.sleep(0.5)
         self.assertEqual("C: TWO", device.handle.screen_string)
-        device.input_pressed(6)
-        device.input_released(6)
+        device.input_pressed(8)
+        device.input_released(8)
         time.sleep(0.5)
         self.assertEqual("C: THREE", device.handle.screen_string)
-        device.input_pressed(6)
-        device.input_released(6)
+        device.input_pressed(8)
+        device.input_released(8)
         time.sleep(0.5)
         self.assertEqual("C: FOUR", device.handle.screen_string)
-        device.input_pressed(6)
-        device.input_released(6)
+        device.input_pressed(8)
+        device.input_released(8)
         time.sleep(0.5)
         self.assertEqual("C: FIVE", device.handle.screen_string)
-        device.input_pressed(6)
-        device.input_released(6)
+        device.input_pressed(8)
+        device.input_released(8)
         time.sleep(0.5)
         self.assertEqual("C: SIX", device.handle.screen_string)
-        device.input_pressed(6)
-        device.input_released(6)
+        device.input_pressed(8)
+        device.input_released(8)
         time.sleep(0.5)
         self.assertEqual("C: ONE", device.handle.screen_string)
 
         time.sleep(6)
 
         self.assertEqual("TEST", device.handle.screen_string)
-        self.assertEqual(28, len(device.handle.messages['screen_string']))
+        self.assertEqual(27, len(device.handle.messages['screen_string']))
 
         self.assertEqual(0, ctrl.failed_writes)
         self.assertEqual(0, ctrl.dropped_leds)
@@ -368,7 +428,8 @@ class AmbitIntegrationTest(unittest.TestCase):
         # configure the device behavior
         device = ambit.fake.Device('DEAD:BEEF', 'XYZ')
 
-        device.components_connected()
+        # start with several components connected.
+        device.components_connected(ambit.fake.LAYOUT_DEFAULT_EXPERTKIT)
 
         # run the simulation
         config = ambit.Configuration()
@@ -395,8 +456,8 @@ class AmbitIntegrationTest(unittest.TestCase):
         # configure the device behavior
         device = ambit.fake.Device('DEAD:BEEF', 'XYZ')
 
-        # Start with several components connected.
-        device.components_connected(ambit.fake.DEFAULT_COMPONENT_LAYOUT)
+        # start with several components connected.
+        device.components_connected(ambit.fake.LAYOUT_DEFAULT_EXPERTKIT)
 
         # run the simulation
         config = ambit.Configuration()
@@ -411,7 +472,7 @@ class AmbitIntegrationTest(unittest.TestCase):
         ctrl.configure_images()
         self.assertEqual({}, device.handle.screen_images)
 
-        device.layout_changed(ambit.fake.BASE_ONLY_LAYOUT)
+        device.layout_changed(ambit.fake.LAYOUT_BASE_ONLY)
 
         time.sleep(1)
 
@@ -435,7 +496,7 @@ class AmbitIntegrationTest(unittest.TestCase):
         # configure the device behavior
         device = ambit.fake.Device('DEAD:BEEF', 'XYZ')
 
-        device.components_connected(ambit.fake.DEFAULT_COMPONENT_LAYOUT)
+        device.components_connected(ambit.fake.LAYOUT_DEFAULT_EXPERTKIT)
 
         # run the simulation
         config = ambit.Configuration()
@@ -449,7 +510,7 @@ class AmbitIntegrationTest(unittest.TestCase):
 
         time.sleep(1)
 
-        device.layout_changed(ambit.fake.RANDOM_COMPONENT_LAYOUT)
+        device.layout_changed(ambit.fake.LAYOUT_RANDOM)
 
         ctrl.wait_for_layout()
 
@@ -472,7 +533,8 @@ class AmbitIntegrationTest(unittest.TestCase):
 
         device.set_version_core('1.3.1')
 
-        device.components_connected(ambit.fake.DEFAULT_COMPONENT_LAYOUT)
+        # start with several components connected.
+        device.components_connected(ambit.fake.LAYOUT_DEFAULT_EXPERTKIT)
 
         # run the simulation
         config = ambit.Configuration()
@@ -500,7 +562,8 @@ class AmbitIntegrationTest(unittest.TestCase):
 
         device.set_version_core('1.4.6136')
 
-        device.components_connected(ambit.fake.DEFAULT_COMPONENT_LAYOUT)
+        # start with several components connected.
+        device.components_connected(ambit.fake.LAYOUT_DEFAULT_EXPERTKIT)
 
         # run the simulation
         config = ambit.Configuration()
@@ -532,7 +595,8 @@ class AmbitIntegrationTest(unittest.TestCase):
         # configure the device behavior
         device = ambit.fake.Device('DEAD:BEEF', 'XYZ')
 
-        device.components_connected(ambit.fake.DEFAULT_COMPONENT_LAYOUT)
+        # start with several components connected.
+        device.components_connected(ambit.fake.LAYOUT_DEFAULT_EXPERTKIT)
 
         # run the simulation
         config = ambit.Configuration()
@@ -779,6 +843,7 @@ class AmbitSimulatorTest(unittest.TestCase):
         ctrl = ambit.simulator.Controller(config)
         ctrl.open()
         ctrl.connect()
+        ctrl.device.components_connected(ambit.fake.LAYOUT_DEFAULT_EXPERTKIT)
         self.ctrl = ctrl
         self.ctrl.wait_for_layout()
 

@@ -17,6 +17,9 @@ flags.add_argument('--verbose', default=False, action='store_true',
 flags.add_argument('--layouts', default=[], type=str, nargs='*',
                    help='launch with the specified layouts')
 
+flags.add_argument('--map_midi', default=True, action='store_true',
+                   help='map midi controller inputs')
+
 flags.add_argument('config_paths', type=str, metavar='CONFIG', nargs='*',
                    help='configuration files to load')
 

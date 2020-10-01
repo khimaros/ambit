@@ -1,0 +1,77 @@
+{
+  "app_version": "2.6.4",
+  "midiChannel": -1,
+  "module_mappings": {
+    "actionMap": {
+      "[slot=(-2,0)]": {
+        "set": {
+          "action": "switchFunctions",
+          "loop": false
+        }
+      },
+      "[slot=(-1,0)]": {
+        "pressed": {
+          "action": "executeCommand",
+          "argv": [
+            "./example/scripts/unlock.sh",
+            "open"
+          ]
+        },
+        "long_pressed": {},
+        "released": {}
+      },
+      "[slot=(1,0)]": {
+        "pressed": {},
+        "long_pressed": {},
+        "released": {}
+      },
+      "[slot=(-1,-1)]": {
+        "pressed": {},
+        "long_pressed": {},
+        "released": {},
+        "rotation_left": {
+          "action": "executeCommand",
+          "argv": [
+            "./example/scripts/unlock.sh",
+            "set"
+          ],
+          "value": 15,
+          "invert": true,
+          "threshold": 32
+        },
+        "rotation_right": {
+          "action": "executeCommand",
+          "argv": [
+            "./example/scripts/unlock.sh",
+            "set"
+          ],
+          "value": 15,
+          "threshold": 32
+        },
+        "set": {}
+      },
+      "[slot=(0,-1)]": {
+        "pressed": {},
+        "long_pressed": {},
+        "released": {},
+        "rotation_left": {},
+        "rotation_right": {},
+        "set": {}
+      },
+      "[slot=(1,-1)]": {
+        "pressed": {},
+        "long_pressed": {},
+        "released": {},
+        "rotation_left": {},
+        "rotation_right": {},
+        "set": {}
+      },
+      "[slot=(2,-1)]": {
+        "set": {}
+      }
+    }
+  },
+  "tabType": "Home",
+  "tabUuid": "{b162b530-34f7-425f-bc4b-a40ebb5f64dc}",
+  "title": "HOME"
+}

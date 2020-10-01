@@ -236,7 +236,6 @@ c = control
 r = repeat / threshold probably
 m = modifier, added together
 
-
 bind dial press to left-shift (0x02) + "s"
 
 ```

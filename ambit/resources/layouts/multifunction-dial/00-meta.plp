@@ -3,28 +3,36 @@
   "midiChannel": -1,
   "module_mappings": {
     "actionMap": {
-      "4}M": {
-        "set": { "action": "executeCommand", "argv": ["./example/scripts/hello.sh"], "threshold": 32 }
+      "[slot=(-2,0)]": {
+        "set": {}
       },
-      "4ls": {
-        "pressed": {},
-        "long_pressed": {},
-        "released": { "action": "executeCommand", "argv": ["./example/scripts/hello.sh", "GALAXY"] }
-      },
-      "4lf": {
+      "[slot=(-1,0)]": {
         "pressed": {},
         "long_pressed": {},
         "released": {}
       },
-      "4A0": {
+      "[slot=(1,0)]": {
+        "pressed": {
+          "action": "cycleMapping",
+          "target": "[slot=(2,-1)]",
+          "items": [
+            { "set": { "action": "setColorRed" } },
+            { "set": { "action": "setColorGreen" } },
+            { "set": { "action": "setColorBlue" } }
+          ]
+        },
+        "long_pressed": {},
+        "released": {}
+      },
+      "[slot=(-1,-1)]": {
         "pressed": {},
         "long_pressed": {},
-        "released": { "action": "executeCommand", "argv": ["./example/scripts/hello.sh", "UNIVERSE"] },
+        "released": {},
         "rotation_left": {},
         "rotation_right": {},
         "set": {}
       },
-      "49d": {
+      "[slot=(0,-1)]": {
         "pressed": {},
         "long_pressed": {},
         "released": {},
@@ -32,20 +40,20 @@
         "rotation_right": { "action": "switchFunctions", "threshold": 32 },
         "set": {}
       },
-      "4FH": {
+      "[slot=(1,-1)]": {
         "pressed": {},
         "long_pressed": {},
         "released": {},
-        "rotation_left": { "action": "executeCommand", "argv": ["./example/scripts/hello.sh", "M-VERSE1"] },
-        "rotation_right": { "action": "executeCommand", "argv": ["./example/scripts/hello.sh", "M-VERSE2"] },
+        "rotation_left": {},
+        "rotation_right": {},
         "set": {}
       },
-      "4}=": {
+      "[slot=(2,-1)]": {
         "set": {}
       }
     }
   },
-  "tabType": "Keyboard",
+  "tabType": "Palette",
   "tabUuid": "{b162b530-34f7-425f-bc4b-a40ebb5f64dc}",
-  "title": "HACK"
+  "title": "META"
 }

@@ -4,6 +4,7 @@
 
 behavior: one of CYCLE, ACCUMULATE, TRIGGER, DELTA
 threshold (default: 1): number of inputs before triggering callback
+timeout (default: 1.5): seconds before triggering delayed behavior
 default: value to initialize component state with
 items (default: []): items to cycle through for CYCLE behavior
 limits (default: None): tuple of (min, max) values for a component
@@ -22,7 +23,8 @@ Defaults are overridden in the following order:
 
 ### common defaults
 
-treshold=1
+threshold=1
+timeout=1.5
 items=[]
 limits=None
 invert=False

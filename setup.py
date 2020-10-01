@@ -1,9 +1,18 @@
 import glob
+import os
+import pathlib
 import setuptools
+
+package_data=dict()
+package_data['ambit'] = []
+for path, paths, files in os.walk('ambit/resources/', followlinks=True):
+    for f in files:
+        include = os.path.join(path, f)[6:]
+        package_data['ambit'].append(include)
 
 setuptools.setup(
     name='ambit',
-    version='0.3.4',
+    version='0.3.5',
     description='Take control of your Palette.',
     long_description=(
         '**ambit** is a Python library for interacting with PaletteGear '
@@ -16,7 +25,7 @@ setuptools.setup(
     url='https://github.com/khimaros/ambit',
     author='khimaros',
     packages=setuptools.find_packages(),
-    include_package_data=True,
+    package_data=package_data,
     scripts=glob.glob('./bin/*'),
     classifiers=[
         'Development Status :: 3 - Alpha',

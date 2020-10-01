@@ -42,22 +42,21 @@ class Configuration(object):
     ACTION_TEST_DELTA = 'testDelta'
     ACTION_TEST_TRIGGER = 'testTrigger'
 
-    # FIXME: add behavior: keywords and mappings
+    # FIXME: add "behavior" keywords and mappings
 
     INPUT_PRESSED = 'pressed'
     INPUT_RELEASED = 'released'
     INPUT_LONG_PRESSED = 'long_pressed'
+    INPUT_DOUBLE_PRESSED = 'double_pressed'
+    INPUT_TRIPLE_PRESSED = 'triple_pressed'
     INPUT_ROTATION_RIGHT = 'rotation_right'
     INPUT_ROTATION_LEFT = 'rotation_left'
     INPUT_ROTATION = 'rotation'
+    INPUT_PRESSED_ROTATION_RIGHT = 'pressed_rotation_right'
+    INPUT_PRESSED_ROTATION_LEFT = 'pressed_rotation_left'
+    INPUT_PRESSED_ROTATION = 'pressed_rotation'
     INPUT_SET = 'set'
     INPUT_MIXED = 'mixed'
-
-    INPUT_MAP = {
-        0: INPUT_PRESSED,
-        1: INPUT_ROTATION_RIGHT,
-        2: INPUT_ROTATION_LEFT,
-    }
 
     ICON_PALETTE = 0
     ICON_PHOTOSHOP = 1
@@ -296,12 +295,18 @@ class Configuration(object):
         self.profile_index = 0
         self.profile = Profile()
         self.profiles = []
+        self.config_dicts = []
         if not paths:
             return
         for path in paths:
             with open(path, 'r') as f:
                 config_bytes = f.read()
-            config_dict = json.loads(config_bytes)
+            try:
+                config_dict = json.loads(config_bytes)
+            except Exception as err:
+                print('Error loading JSON from %s: %s' % (path, err))
+                sys.exit(1)
+            self.config_dicts.append(config_dict)
             profile = Profile()
             profile.title = config_dict['title']
             profile.icon = Configuration.ICON_TYPE_MAP[config_dict['tabType']]
@@ -384,4 +389,7 @@ def StandardConfiguration():
             sys.exit(1)
         config_paths.extend(layout_paths)
     config_paths.extend(FLAGS.config_paths)
-    return Configuration(config_paths)
+    config = Configuration(config_paths)
+    # TODO: move the switch here out of Configuration.__init__()
+    #config.switch(0)
+    return config

@@ -4,7 +4,7 @@
 a graphical simulator for device-free development, and an accompanying set of
 configurable end user tools and demos.
 
-![simulator screenshot](docs/screenshot.png)
+![simulator screenshot](docs/screenshot-expertkit.png)
 
 This project is not endorsed or supported by Monogram.
 
@@ -120,13 +120,13 @@ $ ambit --help
 You can launch ambit with one or more built-in layouts:
 
 ```
-$ ambit --layouts=prokit
+$ ambit --layouts=showcase
 ```
 
 **N.B.** Most built-in layouts assume that your components are in
 [a specific arrangement](docs/layout.jpg).
 
-Examine [ambit/resources/layouts/prokit/](ambit/resources/layouts/prokit/).
+Examine [ambit/resources/layouts/multifunction-buttons/](ambit/resources/layouts/multifunction-buttons/).
 
 You can also create your own [#configuration](#configuration).
 
@@ -265,6 +265,9 @@ The index for a component can be found at it's top right corner.
 In the screenshot above, the top left component `[4}m] 7 (Slider)` has
 an index of `7`.
 
+You can loop through available components using PAGE UP and PAGE DOWN,
+which can also be used to select components higher than 9.
+
 When a component is selected, use keyboard LEFT ARROW and RIGHT ARROW to
 simulate Dial rotation, SPACE to simulate button press/release, and
 UP ARROW and DOWN ARROW to simulate slider movement.
@@ -337,7 +340,7 @@ View the list of available commands:
 $ make help
 ```
 
-Render a simulation (no device required):
+Render a no-op simulation (no device required):
 
 ```
 $ make simulator
@@ -354,7 +357,7 @@ Makefile variable.
 $ make AMBIT_FLAGS=--debug simulator
 ```
 
-Run an interactive demo on a physical Palette device:
+Run no-op mode on a physical Palette device:
 
 ```
 $ make start
@@ -363,17 +366,21 @@ $ make start
 Same as above, plus a GUI:
 
 ```
-$ make start-gui
+$ make gui
 ```
 
-Run a demo with more complex behavior:
+Run a multi-function showcase:
 
 ```
-$ make start-prokit
+$ make simulator-showcase
 ```
 
 ```
-$ make start-prokit-gui
+$ make start-showcase
+```
+
+```
+$ make gui-showcase
 ```
 
 ### Development
@@ -387,7 +394,7 @@ $ make test
 Run a specific test:
 
 ```
-$ make test-integration-layout4
+$ make test-integration-multifunction_buttons
 ```
 
 Generate test coverage report:
@@ -399,7 +406,7 @@ $ make coverage-report
 Profile the simulator:
 
 ```
-$ make simulator-prof
+$ make profile-simulator
 ```
 
 Run static analysis:

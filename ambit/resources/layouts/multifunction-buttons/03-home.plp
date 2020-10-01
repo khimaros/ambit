@@ -1,0 +1,90 @@
+{
+  "app_version": "2.6.4",
+  "midiChannel": -1,
+  "module_mappings": {
+    "actionMap": {
+
+      "[slot=(-2,1)]": {
+        "pressed": {},
+        "released": {},
+        "rotation_left": {},
+        "rotation_right": {},
+        "set": {}
+      },
+      "[slot=(-1,1)]": {
+        "pressed": {},
+        "released": {}
+      },
+      "[slot=(1,1)]": {
+        "pressed": {},
+        "released": {}
+      },
+      "[slot=(2,1)]": {
+        "pressed": {},
+        "released": {},
+        "rotation_left": {},
+        "rotation_right": {},
+        "set": {}
+      },
+
+
+      "[slot=(-2,0)]": {
+        "set": {}
+      },
+      "[slot=(-1,0)]": {
+        "pressed": {},
+        "released": { "action": "previousFunction" }
+      },
+      "[slot=(1,0)]": {
+        "pressed": {},
+        "released": { "action": "nextFunction" }
+      },
+      "[slot=(2,-1)]": {
+        "set": { "action": "executeCommand", "argv": [ "./example/scripts/temperature.sh" ], "limits": [50, 80] }
+      },
+
+
+      "[slot=(-1,-1)]": {
+        "pressed": {},
+        "released": {},
+        "rotation_left": {},
+        "rotation_right": {},
+        "set": {}
+      },
+      "[slot=(0,-1)]": {
+        "pressed": { "action": "executeCommand", "argv": [ "./example/scripts/unlock.sh", "open" ] },
+        "released": {},
+        "rotation_right": { "action": "executeCommand", "argv": [ "./example/scripts/unlock.sh", "set" ], "value": 15, "threshold": 32 },
+        "rotation_left": { "action": "executeCommand", "argv": [ "./example/scripts/unlock.sh", "set" ], "value": 15, "threshold": 32 },
+        "set": {}
+      },
+      "[slot=(1,-1)]": {
+        "pressed": {},
+        "released": {},
+        "rotation_left": {},
+        "rotation_right": {},
+        "set": {}
+      },
+
+
+      "[slot=(-2,-2)]": {
+        "set": {}
+      },
+      "[slot=(0,-2)]": {
+        "pressed": {},
+        "released": {},
+        "rotation_left": {},
+        "rotation_right": {},
+        "set": {}
+      },
+      "[slot=(1,-2)]": {
+        "set": {}
+      }
+
+    }
+  },
+  "orientation": 0,
+  "tabType": "Home",
+  "tabUuid": "{b162b530-34f7-425f-bc4b-a40ebb5f64dc}",
+  "title": "HOME"
+}

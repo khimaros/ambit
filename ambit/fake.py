@@ -9,14 +9,15 @@ import time
 import usb
 
 
-DEFAULT_COMPONENT_LAYOUT = {
+LAYOUT_DEFAULT_EXPERTKIT = {
         'u': '00000', 'i': 1, 't': ambit.Component.KIND_BASE, 'c': [
             None,
             {'u': '  49d', 'i': 2, 't': ambit.Component.KIND_DIAL, 'c': [
                 {'u': '  4FH', 'i': 3, 't': ambit.Component.KIND_DIAL, 'c': [
                     {'u': '  4lf', 'i': 8, 't': ambit.Component.KIND_BUTTON, 'c': [None, None, None]},
                     {'u': '  4}=', 'i': 4, 't': ambit.Component.KIND_SLIDER, 'c': [None, None, None, None, None]},
-                    None]},
+                    None,
+                ]},
                 None,
                 {'u': '  4A0', 'i': 5, 't': ambit.Component.KIND_DIAL, 'c': [
                     None,
@@ -24,15 +25,61 @@ DEFAULT_COMPONENT_LAYOUT = {
                     {'u': '  4ls', 'i': 6, 't': ambit.Component.KIND_BUTTON, 'c': [
                         {'u': '  4}M', 'i': 7, 't': ambit.Component.KIND_SLIDER, 'c': [None, None, None, None, None]},
                         None,
-                        None]}]
-                }]
-            },
-            None]}
+                        None
+                    ]},
+                ]},
+            ]},
+            None,
+        ]}
 
-BASE_ONLY_LAYOUT = {
+LAYOUT_DEFAULT_PROKIT = {
+        'u': '00000', 'i': 1, 't': 0, 'c': [
+            None,
+            {'u': '  C4@', 'i': 2, 't': 2, 'c': [
+                {'u': '  D5o', 'i': 3, 't': 2, 'c': [
+                    {'u': '  B$;', 'i': 4, 't': 1, 'c': [
+                        None,
+                        {'u': '  8S$', 'i': 5, 't': 1, 'c': [None, None, None]},
+                        None,
+                    ]},
+                    {'u': '  Ak~', 'i': 11, 't': 3, 'c': [
+                        None,
+                        {'u': '  6om', 'i': 12, 't': 2, 'c': [None, None, None]},
+                        None,
+                        None,
+                        None,
+                    ]},
+                    {'u': '  8Uq', 'i': 13, 't': 3, 'c': [None, None, None, None, None]},
+                ]},
+                {'u': '  6pZ', 'i': 6, 't': 2, 'c': [None, None, None]},
+                {'u': '  6RD', 'i': 7, 't': 2, 'c': [
+                    None,
+                    None,
+                    {'u': '  8a4', 'i': 8, 't': 1, 'c': [
+                        {'u': '  8W(', 'i': 9, 't': 3, 'c': [
+                            None,
+                            {'u': '  8V$', 'i': 10, 't': 3, 'c': [None, None, None, None, None]},
+                            None,
+                            None,
+                            None,
+                        ]},
+                        {'u': '  8R+', 'i': 14, 't': 1, 'c': [
+                            {'u': '  6J@', 'i': 15, 't': 2, 'c': [None, None, None]},
+                            None,
+                            None
+                        ]},
+                        None,
+                    ]},
+                ]},
+            ]},
+            None,
+        ]}
+
+LAYOUT_BASE_ONLY = {
         'u': '00000', 'i': 1, 't': ambit.Component.KIND_BASE,
         'c': [None, None, None]}
 
+LAYOUT_DEFAULT = LAYOUT_DEFAULT_PROKIT
 
 def make_quad(cur):
     index1 = len(cur) + 1
@@ -118,7 +165,7 @@ def make_component_layout():
     return layout
 
 
-RANDOM_COMPONENT_LAYOUT = make_component_layout()
+LAYOUT_RANDOM = make_component_layout()
 
 
 # NOTE: it is best to rely on as little functionality from the main
@@ -132,7 +179,6 @@ class Handle:
     PHASE_CONTROL_4 = 'CONTROL_4'
     PHASE_CONTROL_5 = 'CONTROL_5'
     PHASE_BULK = 'BULK'
-    PHASE_READY = 'READY'
     PHASE_INPUT = 'INPUT'
 
     # TODO: scale these with number of attached components
@@ -167,6 +213,8 @@ class Handle:
             self.messages[message_type].append(message[message_type])
         if 'start' in message:
             self._process_start(message['start'])
+        if 'stop' in message:
+            self._process_stop()
         if 'led' in message:
             self._process_led(message['led'])
         if 'check' in message:
@@ -183,8 +231,6 @@ class Handle:
 
     def _process_check(self, check):
         #print('[F] Processing check message')
-        if self.phase == Handle.PHASE_READY:
-            self._set_phase(Handle.PHASE_INPUT)
         self._last_check = time.time()
 
     def _process_send_version(self):
@@ -199,9 +245,12 @@ class Handle:
 
     def _process_start(self, start):
         #print('[F] Processing start message')
-        if self.phase == Handle.PHASE_BULK:
-            self._set_phase(Handle.PHASE_READY)
         self._write_layout()
+        if self.phase == Handle.PHASE_BULK:
+            self._set_phase(Handle.PHASE_INPUT)
+
+    def _process_stop(self):
+        self._set_phase(Handle.PHASE_BULK)
 
     def _process_led(self, leds):
         #print('[F] Processing led message', leds)
@@ -301,7 +350,7 @@ class Device:
         self.kinds = {}
         self.handle = None
 
-    def components_connected(self, layout=DEFAULT_COMPONENT_LAYOUT):
+    def components_connected(self, layout=LAYOUT_DEFAULT):
         if ambit.FLAGS.debug:
             print('[F] Layout set to', layout)
         self._layout = layout
@@ -336,6 +385,9 @@ class Device:
         return self.handle
 
     def input_pressed(self, index):
+        if self.handle.phase != Handle.PHASE_INPUT:
+            return
+
         if self.kinds[index] not in (
                 ambit.Component.KIND_DIAL,
                 ambit.Component.KIND_BUTTON):
@@ -350,6 +402,9 @@ class Device:
         ])
 
     def input_released(self, index):
+        if self.handle.phase != Handle.PHASE_INPUT:
+            return
+
         if self.kinds[index] not in (
                 ambit.Component.KIND_DIAL,
                 ambit.Component.KIND_BUTTON):
@@ -364,6 +419,9 @@ class Device:
         ])
 
     def input_slide_up(self, index, amount=8):
+        if self.handle.phase != Handle.PHASE_INPUT:
+            return
+
         if self.kinds[index] != ambit.Component.KIND_SLIDER:
             return
         values = self.values[index]
@@ -386,6 +444,9 @@ class Device:
         ])
 
     def input_slide_down(self, index, amount=8):
+        if self.handle.phase != Handle.PHASE_INPUT:
+            return
+
         if self.kinds[index] != ambit.Component.KIND_SLIDER:
             return
         values = self.values[index]
@@ -400,6 +461,9 @@ class Device:
         ])
 
     def input_rotation_left(self, index, amount=8):
+        if self.handle.phase != Handle.PHASE_INPUT:
+            return
+
         if self.kinds[index] != ambit.Component.KIND_DIAL:
             return
         values = self.values[index]
@@ -414,6 +478,9 @@ class Device:
         ])
 
     def input_rotation_right(self, index, amount=8):
+        if self.handle.phase != Handle.PHASE_INPUT:
+            return
+
         if self.kinds[index] != ambit.Component.KIND_DIAL:
             return
         values = self.values[index]

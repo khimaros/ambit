@@ -323,6 +323,10 @@ class Display(object):
         elif event.type == pygame.KEYDOWN and event.key in (
                 pygame.K_q, pygame.K_ESCAPE):
             self.shutdown()
+        elif event.type == pygame.KEYUP and event.key == pygame.K_PAGEUP:
+            self.selected_component = (self.selected_component - 1) % (len(self.ctrl.layout.connected()) + 1)
+        elif event.type == pygame.KEYUP and event.key == pygame.K_PAGEDOWN:
+            self.selected_component = (self.selected_component + 1) % (len(self.ctrl.layout.connected()) + 1)
         elif event.type == pygame.KEYUP and event.key == pygame.K_TAB:
             self.ctrl.rotate(90)
         elif event.type == pygame.KEYDOWN:

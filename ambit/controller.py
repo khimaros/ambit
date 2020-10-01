@@ -5,6 +5,7 @@ from ambit.configuration import Configuration
 from ambit.message import message_decode, message_encode
 from ambit.flags import FLAGS
 
+import os
 import subprocess
 import sys
 import threading
@@ -683,16 +684,22 @@ class Controller:
 
     def callback_cycle_mapping(self, value, target):
         index, action_config = value
-        self.config.set_component_actions(target, action_config)
-        self.set_component_callbacks(target, self.layout.components[target])
+        component = self.layout.query(target)[0]
+        self.config.set_component_actions(component.uid, action_config)
+        self.set_component_callbacks(component.uid, component)
         self.screen_string(['Red', 'Green', 'Blue'][index])
 
     def callback_execute_command(self, value, argv):
+        cmd = []
+        for a in argv:
+            cmd.append(a.replace('%AMBIT_VALUE%', str(value)))
+        print('[0] Executing command: %s' % cmd)
         p = subprocess.run(
-                argv, env={'AMBIT_VALUE': str(value)},
+                cmd, env=os.environ.update({'AMBIT_VALUE': str(value)}),
                 stdout=subprocess.PIPE)
         result = p.stdout.decode().split('\n')[0].strip()
-        self.screen_string(result)
+        if result:
+            self.screen_string(result)
 
     def callback_set_color_red(self, value):
         value = int(value)
@@ -776,8 +783,8 @@ class Controller:
         # TODO: support layout change callback
         #self.layout_changed_callback()
 
-        # TODO: maybe enable these as flags?
-        #self.configure_midimap()
+        if FLAGS.map_midi:
+            self.configure_midimap()
         #self.configure_hidmap()
 
         print('[0] Processed layout, ready for input!')

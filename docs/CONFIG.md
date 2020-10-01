@@ -151,7 +151,15 @@ Invokes the specified `argv` (list of str) as a subprocess.
 
 environment: `AMBIT_VALUE` set to the current component value.
 
+other environment variables are passed through unmodified.
+
+argv will substitute any instance of `%AMBIT_VALUE%` with the
+current value.
+
 Anything printed to stdout will be displayed to the device screen.
+
+Could be combined with something lik https://github.com/mel00010/OmniPause
+for system wide media control.
 
 ##### cycleMapping
 

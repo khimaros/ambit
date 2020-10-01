@@ -11,13 +11,12 @@ SHELL := /bin/bash
 MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
-AMBIT_FLAGS =
+AMBIT_FLAGS = --verbose
 #AMBIT_FLAGS += --layouts=expertkit
 #AMBIT_FLAGS += --config_paths=/path/to/*.plp
 #AMBIT_FLAGS += --device=DEAD:BEEF
 #AMBIT_FLAGS += --device_index=0
 #AMBIT_FLAGS += --debug
-#AMBIT_FLAGS += --verbose
 
 SOURCES := ./ambit/ ./tools/ ./bin/ ./tests/
 
@@ -28,6 +27,8 @@ help:
 	@echo
 .PHONY: help
 
+
+# VIRTUALENV
 
 venv/bin/activate:
 	python3 -m venv ./venv
@@ -57,9 +58,11 @@ virtual: out/make/virtual
 .PHONY: virtual
 
 
-extract_reference_assets: docs/captures/core-update-images.pcapng
+# EXTRACT
+
+extract-assets: docs/captures/core-update-images.pcapng
 	./tools/extract_reference_assets.sh docs/captures/core-update-images.pcapng ambit/resources/assets/reference/
-.PHONY: extract_reference_assets
+.PHONY: extract-assets
 
 ambit/resources/assets/%.raw: ambit/resources/assets/%.png out/make/virtual
 	source ./venv/bin/activate && ./bin/ambit_image_convert $< $@
@@ -67,6 +70,30 @@ ambit/resources/assets/%.raw: ambit/resources/assets/%.png out/make/virtual
 assets: ambit/resources/assets/23.raw ambit/resources/assets/24.raw ambit/resources/assets/25.raw
 .PHONY: assets
 
+extract-firmware: out/firmware/palette-firmware.hex
+.PHONY: extract-firmware
+
+out/firmware/palette-firmware.psh: docs/captures/firmware-update-push.pcapng
+	mkdir -p $(@D)
+	tshark -r $< -2 -T fields \
+		-e usb.data_fragment -Y usb.data_fragment \
+		-R 'usb.dst == "1.55.0" or usb.src == "1.55.0" and usb.bmRequestType == 0x21 and usb.data_fragment[0] == 0x01' \
+		| sed 's/^.\{64\}//' | sed 's/.\{32\}$$//' | tr -d '\n' > $@
+
+out/firmware/palette-firmware.bin: out/firmware/palette-firmware.psh
+	xxd -r -ps < $< > $@
+
+out/firmware/palette-firmware.hex: out/firmware/palette-firmware.bin
+	./tools/bin_to_ihx.py $< $@
+
+out/firmware/palette-firmware.asm: out/firmware/palette-firmware.hex
+	avr-objdump -m avr:5 -s -j .sec1 -d $< > $@
+
+out/firmware/palette-firmware.elf: out/firmware/palette-firmware.bin
+	avr-objcopy -I binary -O elf32-avr $< $@
+
+
+# SETUP
 
 setup: virtual assets
 .PHONY: setup
@@ -74,6 +101,8 @@ setup: virtual assets
 setup-dev: virtual assets deps-dev
 .PHONY: setup-dev
 
+
+# TEST
 
 test: setup
 	source ./venv/bin/activate && python3 tests/test_ambit.py
@@ -103,21 +132,13 @@ test-integration-reference_meta: setup
 	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_reference_meta
 .PHONY: test-integration-reference_meta
 
-test-integration-layout1: setup
-	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_layout1
-.PHONY: test-integration-layout1
+test-integration-multifunction_buttons: setup
+	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_multifunction_buttons
+.PHONY: test-integration-multifunction_buttons
 
-test-integration-layout2: setup
-	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_layout2
-.PHONY: test-integration-layout2
-
-test-integration-layout4: setup
-	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_layout4
-.PHONY: test-integration-layout4
-
-test-integration-expertkit: setup
-	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_expertkit
-.PHONY: test-integration-expertkit
+test-integration-behaviors: setup
+	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_behaviors
+.PHONY: test-integration-behaviors
 
 test-message: setup
 	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitMessageTest
@@ -135,11 +156,27 @@ test-simulator: setup
 	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitSimulatorTest
 .PHONY: test-simulator
 
-test-prof: deps-dev
+
+# PROFILE
+
+benchmark: setup
+	source ./venv/bin/activate && bin/ambit_benchmark $(AMBIT_FLAGS)
+.PHONY: benchmark
+
+profile-simulator: deps-dev setup
+	mkdir -p ./out/mtprof/
+	source ./venv/bin/activate && python3 -m mtprof -o ./out/mtprof/simulator.prof bin/ambit_simulator $(AMBIT_FLAGS)
+	source ./venv/bin/activate && snakeviz ./out/mtprof/simulator.prof
+.PHONY: profile-simulator
+
+profile-test: deps-dev
 	mkdir -p ./out/mtprof/
 	source ./venv/bin/activate && python3 -m mtprof -o ./out/mtprof/test.prof tests/test_ambit.py
 	source ./venv/bin/activate && snakeviz ./out/mtprof/test.prof
-.PHONY: test-prof
+.PHONY: profile-test
+
+
+# STATIC ANALYSIS
 
 cloc:
 	cloc --exclude-list-file=.gitignore .
@@ -148,6 +185,9 @@ cloc:
 lint: deps-dev
 	source ./venv/bin/activate && mypy
 .PHONY: lint
+
+
+# GENERATE
 
 docs:
 	mkdir -p ./out/docs/
@@ -166,24 +206,7 @@ coverage-report: deps-dev setup
 .PHONY: coverage-report
 
 
-out/firmware/palette-firmware.psh: docs/captures/firmware-update-push.pcapng
-	mkdir -p $(@D)
-	tshark -r $< -2 -T fields \
-		-e usb.data_fragment -Y usb.data_fragment \
-		-R 'usb.dst == "1.55.0" or usb.src == "1.55.0" and usb.bmRequestType == 0x21 and usb.data_fragment[0] == 0x01' \
-		| sed 's/^.\{64\}//' | sed 's/.\{32\}$$//' | tr -d '\n' > $@
-
-out/firmware/palette-firmware.bin: out/firmware/palette-firmware.psh
-	xxd -r -ps < $< > $@
-
-out/firmware/palette-firmware.hex: out/firmware/palette-firmware.bin
-	./tools/bin_to_ihx.py $< $@
-
-out/firmware/palette-firmware.asm: out/firmware/palette-firmware.hex
-	avr-objdump -m avr:5 -s -j .sec1 -d $< > $@
-
-out/firmware/palette-firmware.elf: out/firmware/palette-firmware.bin
-	avr-objcopy -I binary -O elf32-avr $< $@
+# FLASHING
 
 flash-reference-%: reference/firmware/firmware-%.hex
 	dfu-programmer at90usb1286 erase
@@ -208,9 +231,15 @@ flash_teensy-ledopt: flash_teensy-reference-1.3.1
 .PHONY: flash_teensy-ledopt
 
 
-benchmark: setup
-	source ./venv/bin/activate && bin/ambit_benchmark $(AMBIT_FLAGS)
-.PHONY: benchmark
+# UTILITY
+
+reboot_bootloader: setup
+	source ./venv/bin/activate && bin/ambit_reboot_bootloader $(AMBIT_FLAGS)
+.PHONY: reboot_bootloader
+
+push_assets: setup
+	source ./venv/bin/activate && bin/ambit_push_assets $(AMBIT_FLAGS)
+.PHONY: push_assets
 
 bin/ambit_console: bin/ambit_console_simulator setup
 	./tools/convert_simulator_bin.sh console
@@ -223,14 +252,8 @@ console_simulator: setup-dev
 	source ./venv/bin/activate && bin/ambit_console_simulator $(AMBIT_FLAGS)
 .PHONY: console_simulator
 
-reboot_bootloader: setup
-	source ./venv/bin/activate && bin/ambit_reboot_bootloader $(AMBIT_FLAGS)
-.PHONY: reboot_bootloader
 
-push_assets: setup
-	source ./venv/bin/activate && bin/ambit_push_assets $(AMBIT_FLAGS)
-.PHONY: push_assets
-
+# DEMOSCENE
 
 bin/ambit_lightshow: bin/ambit_lightshow_simulator setup
 	./tools/convert_simulator_bin.sh lightshow
@@ -238,10 +261,6 @@ bin/ambit_lightshow: bin/ambit_lightshow_simulator setup
 lightshow: bin/ambit_lightshow setup
 	source ./venv/bin/activate && bin/ambit_lightshow $(AMBIT_FLAGS)
 .PHONY: lightshow
-
-lightshow-gui: setup
-	source ./venv/bin/activate && bin/ambit_lightshow_gui $(AMBIT_FLAGS)
-.PHONY: lightshow-gui
 
 lightshow_simulator: setup
 	source ./venv/bin/activate && bin/ambit_lightshow_simulator $(AMBIT_FLAGS)
@@ -270,6 +289,8 @@ demoscene_simulator: setup
 .PHONY: demoscene_simulator
 
 
+# MAP
+
 map_hid: setup
 	source ./venv/bin/activate && bin/ambit_map_hid --debug ./ambit/resources/configs/hidmap.plp $(AMBIT_FLAGS)
 .PHONY: map_hid
@@ -279,100 +300,52 @@ map_midi: setup
 .PHONY: map_midi
 
 
+# SIMULATOR
+
 simulator: setup
-	source ./venv/bin/activate && bin/ambit_simulator --verbose $(AMBIT_FLAGS)
+	source ./venv/bin/activate && bin/ambit_simulator $(AMBIT_FLAGS)
 .PHONY: simulator
 
-simulator-prof: deps-dev setup
-	mkdir -p ./out/mtprof/
-	source ./venv/bin/activate && python3 -m mtprof -o ./out/mtprof/simulator.prof bin/ambit_simulator --verbose $(AMBIT_FLAGS)
-	source ./venv/bin/activate && snakeviz ./out/mtprof/simulator.prof
-.PHONY: simulator-prof
+simulator-showcase: setup
+	source ./venv/bin/activate && bin/ambit_simulator --layouts=showcase $(AMBIT_FLAGS)
+.PHONY: simulator-showcase
 
-simulator-layout1: setup
-	source ./venv/bin/activate && bin/ambit_simulator --layouts=layout1 $(AMBIT_FLAGS)
-.PHONY: simulator-layout1
+simulator-test_behaviors: setup
+	source ./venv/bin/activate && bin/ambit_simulator --layouts=test-behaviors $(AMBIT_FLAGS)
+.PHONY: simulator-test_behaviors
 
-simulator-layout2: setup
-	source ./venv/bin/activate && bin/ambit_simulator --layouts=layout2 $(AMBIT_FLAGS)
-.PHONY: simulator-layout2
 
-simulator-layout4: setup
-	source ./venv/bin/activate && bin/ambit_simulator --layouts=layout4 $(AMBIT_FLAGS)
-.PHONY: simulator-layout4
-
-simulator-expertkit: setup
-	source ./venv/bin/activate && bin/ambit_simulator --layouts=expertkit $(AMBIT_FLAGS)
-.PHONY: simulator-expertkit
-
-simulator-prokit: setup
-	source ./venv/bin/activate && bin/ambit_simulator --layouts=prokit $(AMBIT_FLAGS)
-.PHONY: simulator-prokit
-
-simulator-prokit-rowwise: setup
-	source ./venv/bin/activate && bin/ambit_simulator --layouts=prokit-rowwise $(AMBIT_FLAGS)
-.PHONY: simulator-prokit-rowwise
+# START
 
 start: setup
-	source ./venv/bin/activate && bin/ambit --verbose $(AMBIT_FLAGS)
+	source ./venv/bin/activate && bin/ambit $(AMBIT_FLAGS)
 .PHONY: start
 
-start-gui: setup
-	source ./venv/bin/activate && bin/ambit_gui --verbose $(AMBIT_FLAGS)
-.PHONY: start-gui
+start-showcase: setup
+	source ./venv/bin/activate && bin/ambit --layouts=showcase $(AMBIT_FLAGS)
+.PHONY: start-showcase
 
-start-debug: setup
-	source ./venv/bin/activate && bin/ambit --verbose --debug $(AMBIT_FLAGS)
-.PHONY: start-debug
+start-test_behaviors: setup
+	source ./venv/bin/activate && bin/ambit --layouts=test-behaviors $(AMBIT_FLAGS)
+.PHONY: start-test_behaviors
 
-start-layout1: setup
-	source ./venv/bin/activate && bin/ambit --layouts=layout1 $(AMBIT_FLAGS)
-.PHONY: start-layout1
 
-start-layout2: setup
-	source ./venv/bin/activate && bin/ambit --layouts=layout2 $(AMBIT_FLAGS)
-.PHONY: start-layout2
+# GUI
 
-start-layout2-gui: setup
-	source ./venv/bin/activate && bin/ambit_gui --layouts=layout2 $(AMBIT_FLAGS)
-.PHONY: start-layout2-gui
+gui: setup
+	source ./venv/bin/activate && bin/ambit_gui $(AMBIT_FLAGS)
+.PHONY: gui
 
-start-layout3: setup
-	source ./venv/bin/activate && bin/ambit --layouts=layout3 $(AMBIT_FLAGS)
-.PHONY: start-layout3
+gui-showcase: setup
+	source ./venv/bin/activate && bin/ambit_gui --layouts=showcase $(AMBIT_FLAGS)
+.PHONY: gui-showcase
 
-start-layout4: setup
-	source ./venv/bin/activate && bin/ambit --layouts=layout4 $(AMBIT_FLAGS)
-.PHONY: start-layout4
+gui-test_behaviors: setup
+	source ./venv/bin/activate && bin/ambit_gui --layouts=test-behaviors $(AMBIT_FLAGS)
+.PHONY: gui-test_behaviors
 
-start-layout4-gui: setup
-	source ./venv/bin/activate && bin/ambit_gui --layouts=layout4 $(AMBIT_FLAGS)
-.PHONY: start-layout4-gui
 
-start-expertkit: setup
-	source ./venv/bin/activate && bin/ambit --layouts=expertkit $(AMBIT_FLAGS)
-.PHONY: start-expertkit
-
-start-expertkit-gui: setup
-	source ./venv/bin/activate && bin/ambit_gui --layouts=expertkit $(AMBIT_FLAGS)
-.PHONY: start-expertkit-gui
-
-start-prokit: setup
-	source ./venv/bin/activate && bin/ambit --layouts=prokit $(AMBIT_FLAGS)
-.PHONY: start-prokit
-
-start-prokit-gui: setup
-	source ./venv/bin/activate && bin/ambit_gui --layouts=prokit $(AMBIT_FLAGS)
-.PHONY: start-prokit-gui
-
-start-prokit-rowwise: setup
-	source ./venv/bin/activate && bin/ambit --layouts=prokit-rowwise $(AMBIT_FLAGS)
-.PHONY: start-prokit-rowwise
-
-start-prokit-rowwise-gui: setup
-	source ./venv/bin/activate && bin/ambit_gui --layouts=prokit-rowwise $(AMBIT_FLAGS)
-.PHONY: start-prokit-rowwise-gui
-
+# DIST
 
 install:
 	python3 -m pip install .
@@ -381,7 +354,6 @@ install:
 uninstall:
 	python3 -m pip uninstall -y ambit
 .PHONY: uninstall
-
 
 bdist_wheel: deps-dev
 	python3 setup.py sdist bdist_wheel
@@ -404,7 +376,6 @@ publish: deps-dev bdist_wheel
 publish-testpypi: deps-dev bdist_wheel
 	source ./venv/bin/activate && python3 -m twine upload --repository testpypi dist/*
 .PHONY: publish-testpypi
-
 
 clean:
 	rm -rf ./venv/

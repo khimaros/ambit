@@ -3,24 +3,43 @@
   "midiChannel": -1,
   "module_mappings": {
     "actionMap": {
-      "4}M": {
-        "set": {}
+      "[slot=(-2,0)]": {
+        "set": {
+          "action": "switchFunctions",
+          "loop": false
+        }
       },
-      "4ls": {
+      "[slot=(-1,0)]": {
         "pressed": {},
         "long_pressed": {},
         "released": {}
       },
-      "4lf": {
-        "pressed": { "action": "cycleMapping", "target": "4}=", "items": [
-          {"set": { "action": "setColorRed" }},
-          {"set": { "action": "setColorGreen" }},
-          {"set": { "action": "setColorBlue" }}
-        ]},
+      "[slot=(1,0)]": {
+        "pressed": {
+          "action": "cycleMapping",
+          "target": "4}=",
+          "items": [
+            {
+              "set": {
+                "action": "setColorRed"
+              }
+            },
+            {
+              "set": {
+                "action": "setColorGreen"
+              }
+            },
+            {
+              "set": {
+                "action": "setColorBlue"
+              }
+            }
+          ]
+        },
         "long_pressed": {},
         "released": {}
       },
-      "4A0": {
+      "[slot=(-1,-1)]": {
         "pressed": {},
         "long_pressed": {},
         "released": {},
@@ -28,15 +47,7 @@
         "rotation_right": {},
         "set": {}
       },
-      "49d": {
-        "pressed": {},
-        "long_pressed": {},
-        "released": {},
-        "rotation_left": { "action": "switchFunctions", "invert": true, "threshold": 32 },
-        "rotation_right": { "action": "switchFunctions", "threshold": 32 },
-        "set": {}
-      },
-      "4FH": {
+      "[slot=(0,-1)]": {
         "pressed": {},
         "long_pressed": {},
         "released": {},
@@ -44,7 +55,15 @@
         "rotation_right": {},
         "set": {}
       },
-      "4}=": {
+      "[slot=(1,-1)]": {
+        "pressed": {},
+        "long_pressed": {},
+        "released": {},
+        "rotation_left": {},
+        "rotation_right": {},
+        "set": {}
+      },
+      "[slot=(2,-1)]": {
         "set": {}
       }
     }

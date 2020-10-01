@@ -3,6 +3,31 @@
   "midiChannel": -1,
   "module_mappings": {
     "actionMap": {
+
+      "[slot=(-2,1)]": {
+        "pressed": {},
+        "released": {},
+        "rotation_left": { "action": "testCycle", "items": ["ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX"], "threshold": 16 },
+        "rotation_right": { "action": "testCycle", "items": ["ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX"], "threshold": 16 },
+        "set": {}
+      },
+      "[slot=(-1,1)]": {
+        "pressed": {},
+        "released": { "action": "testAccumulate", "value": 50 }
+      },
+      "[slot=(1,1)]": {
+        "pressed": {},
+        "released": { "action": "testAccumulate", "value": 25 }
+      },
+      "[slot=(2,1)]": {
+        "pressed": {},
+        "released": {},
+        "rotation_left": {},
+        "rotation_right": {},
+        "set": { "action": "testAccumulate", "limits": [0, 255] }
+      },
+
+
       "[slot=(-2,0)]": {
         "set": { "action": "testTrigger" }
       },
@@ -14,6 +39,11 @@
         "pressed": { "action": "testTrigger" },
         "released": { "action": "testTrigger" }
       },
+      "[slot=(2,-1)]": {
+        "set": { "action": "testCycle", "items": ["ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX"] }
+      },
+
+
       "[slot=(-1,-1)]": {
         "pressed": { "action": "testAccumulate", "value": 1000 },
         "released": {},
@@ -35,39 +65,23 @@
         "rotation_right": {},
         "set": { "action": "testTrigger" }
       },
-      "[slot=(2,-1)]": {
-        "set": { "action": "testCycle", "items": ["ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX"] }
-      },
 
-      "[slot=(-3,0)]": {
+
+      "[slot=(-2,-2)]": {
         "set": { "action": "testAccumulate", "value": 10, "limits": [] }
       },
-      "[slot=(-2,1)]": {
-        "pressed": {},
+      "[slot=(0,-2)]": {
+        "pressed": { "action": "testTrigger", "value": 255 },
         "released": {},
-        "rotation_left": { "action": "testCycle", "items": ["ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX"], "threshold": 16 },
-        "rotation_right": { "action": "testCycle", "items": ["ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX"], "threshold": 16 },
+        "rotation_left": { "action": "testAccumulate", "limits": [0, 255] },
+        "rotation_right": { "action": "testAccumulate", "limits": [0, 255] },
         "set": {}
       },
-      "[slot=(-1,1)]": {
-        "pressed": {},
-        "released": { "action": "testAccumulate", "value": 50 }
-      },
-      "[slot=(1,1)]": {
-        "pressed": {},
-        "released": { "action": "testAccumulate", "value": 25 }
-      },
-      "[slot=(2,1)]": {
-        "pressed": {},
-        "released": {},
-        "rotation_left": {},
-        "rotation_right": {},
-        "set": { "action": "testTrigger" }
-      },
-      "[slot=(3,-1)]": {
+      "[slot=(1,-2)]": {
         "set": { "action": "testDelta" }
       }
     }
+
   },
   "orientation": 0,
   "tabType": "Palette",
