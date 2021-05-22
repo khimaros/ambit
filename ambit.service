@@ -1,0 +1,12 @@
+[Unit]
+Description=ambit
+
+ConditionUser=!root
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/env ambit_demoscene
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

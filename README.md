@@ -70,8 +70,14 @@ If you are not able to connect after installation, check out
 
 Install from the PyPI package repository:
 
-```
+```shell
 $ python3 -m pip install ambit
+```
+
+For maximum functionality, install these dependencies:
+
+```shell
+$ python3 -m pip install pyusb pygame numpy
 ```
 
 To install from source, see [#build](#build).
@@ -109,6 +115,11 @@ $ ambit_gui --verbose
 Throughout this document, anywhere you see an `ambit` command, you can usually
 append `_gui` or `_simulator`, as in `ambit_gui` or `ambit_demoscene_simulator`.
 
+### Running as a systemd service
+
+If you wish to run ambit as a systemd service, copy `ambit.service`
+to `~/.config/systemd/user/` and modify the `ExecStart` line as needed.
+
 ### Advanced usage
 
 To view full command line usage:
@@ -124,7 +135,8 @@ $ ambit --layouts=showcase
 ```
 
 **N.B.** Most built-in layouts assume that your components are in
-[a specific arrangement](docs/layout.jpg).
+a specific arrangement. [prokit](docs/layout-prokit.jpg) or
+[expertkit](docs/layout-expertkit.jpg).
 
 Examine [ambit/resources/layouts/multifunction-buttons/](ambit/resources/layouts/multifunction-buttons/).
 

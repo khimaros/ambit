@@ -11,7 +11,7 @@ SHELL := /bin/bash
 MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
-AMBIT_FLAGS = --verbose
+#AMBIT_FLAGS = --verbose
 #AMBIT_FLAGS += --layouts=expertkit
 #AMBIT_FLAGS += --config_paths=/path/to/*.plp
 #AMBIT_FLAGS += --device=DEAD:BEEF
