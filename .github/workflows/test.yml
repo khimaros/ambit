@@ -1,0 +1,29 @@
+name: Makefile CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Clone repository
+      uses: actions/checkout@v2
+
+    - name: Enable deb-src repositories
+      run: "sudo sed -i 's|# deb-src |deb-src |g' /etc/apt/sources.list"
+
+    - name: Install build dependencies
+      run: sudo apt update && sudo apt install python3-pip python3-venv && sudo apt build-dep -y python3-pygame python3-usb python3-numpy
+
+    - name: Install dependencies
+      run: make deps
+
+    - name: Run tests
+      run: make test
