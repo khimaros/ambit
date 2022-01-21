@@ -15,5 +15,5 @@ typed-ast==1.4.1
 typing-extensions==3.7.4.2
 pylint==2.5.2
 twine==3.1.1
-IPython==7.15.0
+IPython==7.16.3
 IntelHex==2.2.1
