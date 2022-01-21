@@ -12,12 +12,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    
+
     - name: Setup Python
       uses: actions/setup-python@v2.3.1
 
     - name: Clone repository
       uses: actions/checkout@v2
+      
+    - name: Install build dependencies
+      run: sudo apt build-dep -y python3-pygame python3-pyusb
       
     - name: Install dependencies
       run: make deps
