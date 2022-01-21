@@ -23,7 +23,7 @@ jobs:
       run: "sudo sed -i 's|# deb-src |deb-src |g' /etc/apt/sources.list"
 
     - name: Install build dependencies
-      run: sudo apt update && sudo apt build-dep -y python3-pygame python3-pyusb
+      run: sudo apt update && sudo apt build-dep -y python3-pygame python3-usb
 
     - name: Install dependencies
       run: make deps
