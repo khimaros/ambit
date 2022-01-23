@@ -120,6 +120,13 @@ append `_gui` or `_simulator`, as in `ambit_gui` or `ambit_demoscene_simulator`.
 If you wish to run ambit as a systemd service, copy `ambit.service`
 to `~/.config/systemd/user/` and modify the `ExecStart` line as needed.
 
+You can find the device to use in the `WantedBy` line by looking for the
+`.device` node in systemd:
+
+```shell
+$ systemctl --user | grep Palette
+```
+
 ### Advanced usage
 
 To view full command line usage:
@@ -240,7 +247,7 @@ $ ambit_lavalamp
 
 ### Troubleshooting
 
-If you followed the instructions in [#hardware](#hardware) and the simulator works,
+If you followed the instructions in [#preparation](#preparation) and the simulator works,
 but you are still not able to connect to a physical device, you may need to
 adjust the `idVendor` and `idProduct` values in `99-usb-palette.rules`.
 

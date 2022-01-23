@@ -1,7 +1,7 @@
 [Unit]
 Description=ambit
-
 ConditionUser=!root
+StopWhenUnneeded=true
 
 [Service]
 Type=simple
@@ -9,4 +9,4 @@ ExecStart=/usr/bin/env ambit_demoscene
 Restart=on-failure
 
 [Install]
-WantedBy=default.target
+WantedBy=sys-devices-pci0000:00-0000:00:1a.0-usb1-1\x2d1-1\x2d1.6-1\x2d1.6:1.4-sound-card1.device

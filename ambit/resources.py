@@ -22,7 +22,7 @@ def layout_paths(layout, recurse=True):
     path = os.path.join(LAYOUTS_PATH, layout)
     if recurse:
         path = os.path.join(path, '*.plp')
-    return glob.glob(path)
+    return sorted(glob.glob(path))
 
 
 def asset_path(index, fmt='raw'):

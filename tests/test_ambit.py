@@ -1,4 +1,9 @@
+import os
+
+os.environ['SDL_VIDEODRIVER'] = 'dummy'
+
 import ambit
+import ambit.controller
 import ambit.coordinates
 import ambit.fake
 import ambit.image
@@ -11,6 +16,9 @@ import pygame
 import time
 import unittest
 import unittest.mock
+
+# Seconds to wait for input to register and settle.
+TEST_INPUT_SETTLED_SECONDS = 0.25
 
 
 class AmbitIntegrationTest(unittest.TestCase):
@@ -39,20 +47,49 @@ class AmbitIntegrationTest(unittest.TestCase):
         ctrl.open()
         ctrl.connect()
 
+        # initial state and layout
         ctrl.wait_for_layout()
-
         self.assertEqual(8, len(ctrl.layout.connected()))
 
         # Button / Switch profile
         device.input_pressed(6)
         device.input_released(6)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 2)
         self.assertEqual("META", device.handle.screen_string)
 
-        time.sleep(2)
+    def test_keepalive(self):
+        ambit.FLAGS.debug = True
+        ambit.FLAGS.verbose = False
 
+        # configure the device behavior
+        device = ambit.fake.Device('DEAD:BEEF', 'XYZ')
+
+        # start with several components connected.
+        device.components_connected(ambit.fake.LAYOUT_DEFAULT_EXPERTKIT)
+
+        # run the simulation
+        config = ambit.Configuration(['./reference/layouts/meta.plp'])
+        ctrl = ambit.Controller(config, device)
+        self.ctrl = ctrl
+        ctrl.open()
+        ctrl.connect()
+
+        # initial state and layout
+        ctrl.wait_for_layout()
+        self.assertEqual(8, len(ctrl.layout.connected()))
+
+        ctrl.wait()
         self.assertEqual(1, len(device.handle.messages['check']))
-        self.assertEqual("META", device.handle.screen_string)
+
+        # keepalive timeout reached when no user input
+        time.sleep(ambit.controller.Controller.KEEPALIVE_TIMEOUT_SECONDS + 1)
+        self.assertEqual(2, len(device.handle.messages['check']))
+
+        # no keepalive when there is continuous user input
+        for i in range(0, ambit.controller.Controller.KEEPALIVE_TIMEOUT_SECONDS + 1):
+            ctrl.screen_string('CHECK: %d' % i)
+            time.sleep(1)
+        self.assertEqual(2, len(device.handle.messages['check']))
 
     def test_orientation_change(self):
         # TODO: need a test that loads a config with "orientation" defined as 180,
@@ -78,27 +115,19 @@ class AmbitIntegrationTest(unittest.TestCase):
         ctrl.open()
         ctrl.connect()
 
+        # initial state and layout
         ctrl.wait_for_layout()
-
         self.assertEqual(8, len(ctrl.layout.connected()))
-
-        time.sleep(1)
-
-        self.assertEqual(1, len(device.handle.messages['check']))
         self.assertEqual("META", device.handle.screen_string)
         self.assertEqual([0], device.handle.messages['screen_display'])
-
-        time.sleep(2)
 
         # Dial / Change LED Colors
         device.input_rotation_left(2, 8)
         device.input_rotation_left(2, 8)
         device.input_rotation_left(2, 16)
-        time.sleep(1)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 3)
         self.assertEqual("Green: 231", device.handle.screen_string)
-
         ctrl.wait()
-
         self.assertEqual({
             1: (255, 231, 255),
             2: (255, 231, 255),
@@ -110,22 +139,23 @@ class AmbitIntegrationTest(unittest.TestCase):
             8: (255, 231, 255),
         }, device.handle.leds)
 
-        # Button / Switch profile
+        # Button / Switch profile (previous)
         device.input_pressed(6)
         device.input_released(6)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 2)
         self.assertEqual("HOME", device.handle.screen_string)
 
-        # Button / Switch profile
+        # Button / Switch profile (next)
         device.input_pressed(8)
         device.input_released(8)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 2)
         self.assertEqual("META", device.handle.screen_string)
         device.input_pressed(8)
         device.input_released(8)
-        time.sleep(0.5)
-        self.assertEqual("MUSIC", device.handle.screen_string)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 2)
+        self.assertEqual("HACK", device.handle.screen_string)
 
+        # check for error conditions
         self.assertEqual(0, ctrl.failed_writes)
         self.assertEqual(0, ctrl.dropped_leds)
         self.assertEqual(0, ctrl.dropped_screen_strings)
@@ -147,39 +177,29 @@ class AmbitIntegrationTest(unittest.TestCase):
         ctrl.open()
         ctrl.connect()
 
+        # initial state and layout
         ctrl.wait_for_layout()
-
         self.assertEqual(8, len(ctrl.layout.connected()))
-
-        time.sleep(1)
-
-        self.assertEqual(1, len(device.handle.messages['check']))
         self.assertEqual("META", device.handle.screen_string)
         self.assertEqual([0], device.handle.messages['screen_display'])
 
-        time.sleep(2)
-
         # Button / Select LED control
         device.input_pressed(8)
-        time.sleep(0.5)
         device.input_released(8)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 2)
         self.assertEqual("Green", device.handle.screen_string)
         device.input_pressed(8)
-        time.sleep(0.5)
         device.input_released(8)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 2)
         self.assertEqual("Blue", device.handle.screen_string)
 
         # Slider / Change LED colors
         device.input_slide_up(4, 4)
         device.input_slide_up(4, 16)
         device.input_slide_up(4, 128)
-        time.sleep(1)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 3)
         self.assertEqual("Blue: 148", device.handle.screen_string)
-
         ctrl.wait()
-
         self.assertEqual({
             1: (255, 255, 148),
             2: (255, 255, 148),
@@ -195,39 +215,40 @@ class AmbitIntegrationTest(unittest.TestCase):
         device.input_rotation_right(2, 8)
         device.input_rotation_right(2, 8)
         device.input_rotation_right(2, 16)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 3)
         self.assertEqual("HACK", device.handle.screen_string)
 
         # Button / Execute command (hello)
         device.input_pressed(5)
         device.input_released(5)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 2)
         self.assertEqual("UNIVERSE!", device.handle.screen_string)
 
         # Dial / Switch profile
         device.input_rotation_left(2, 16)
         device.input_rotation_left(2, 16)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 2)
         self.assertEqual("META", device.handle.screen_string)
         device.input_rotation_left(2, 16)
         device.input_rotation_left(2, 16)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 2)
         self.assertEqual("HOME", device.handle.screen_string)
 
         # Slider / Execute command (temperature)
         device.input_slide_up(7, 255)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS)
         self.assertEqual("TEMP: 80F", device.handle.screen_string)
         device.input_slide_down(7, 20)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS)
         self.assertEqual("TEMP: 77F", device.handle.screen_string)
 
         # Dial / Execute command (unlock)
         device.input_rotation_right(5, 16)
         device.input_rotation_right(5, 16)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 2)
         self.assertEqual("OPEN: 15m", device.handle.screen_string)
 
+        # check for error conditions
         self.assertEqual(0, ctrl.failed_writes)
         self.assertEqual(0, ctrl.dropped_leds)
         self.assertEqual(0, ctrl.dropped_screen_strings)
@@ -249,8 +270,8 @@ class AmbitIntegrationTest(unittest.TestCase):
         ctrl.open()
         ctrl.connect()
 
+        # initial state and layout
         ctrl.wait_for_layout()
-
         # [0] Component attached: Base (1) 00000 (0, 0) - 0 - False ::
         # [0] Component attached: Dial (2) C4@ (0, -1) - 0 - False ::
         # [0] Component attached: Dial (3) D5o (1, -1) - 270 - False ::
@@ -266,7 +287,6 @@ class AmbitIntegrationTest(unittest.TestCase):
         # [0] Component attached: Slider (13) 8Uq (1, -2) - 0 - False ::
         # [0] Component attached: Button (14) 8R+ (-1, 1) - 180 - False ::
         # [0] Component attached: Dial (15) 6J@ (-2, 1) - 90 - False ::
-
         self.assertEqual(0, ctrl.layout.find_component(1).orientation)
         self.assertEqual(0, ctrl.layout.find_component(2).orientation)
         self.assertEqual(270, ctrl.layout.find_component(3).orientation)
@@ -302,8 +322,6 @@ class AmbitIntegrationTest(unittest.TestCase):
         self.assertEqual(True, ctrl.layout.find_component(9).flip)
         self.assertEqual(False, ctrl.layout.find_component(10).flip)
 
-        self.assertEqual(15, len(ctrl.layout.connected()))
-
         # [0] Bound callback pressed testAccumulate (ACCUMULATE) to component 6RD
         # [0] Bound callback rotation_left testAccumulate (ACCUMULATE) to component 6RD
         # [0] Bound callback rotation_right testAccumulate (ACCUMULATE) to component 6RD
@@ -327,26 +345,23 @@ class AmbitIntegrationTest(unittest.TestCase):
         # [0] Bound callback set testCycle (CYCLE) to component Ak~
         # [0] Bound callback set testAccumulate (ACCUMULATE) to component 6om
 
-        time.sleep(2)
-
-        self.assertEqual(1, len(device.handle.messages['check']))
+        # initial state and layout
+        self.assertEqual(15, len(ctrl.layout.connected()))
         self.assertEqual("TEST", device.handle.screen_string)
         self.assertEqual([0], device.handle.messages['screen_display'])
-
-        time.sleep(2)
 
         # Dial / ACCUMULATE
         device.input_rotation_left(7, 8)
         device.input_rotation_left(7, 8)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 2)
         self.assertEqual("A: -2", device.handle.screen_string)
         device.input_pressed(7)
         device.input_released(7)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 2)
         self.assertEqual("A: 998", device.handle.screen_string)
         device.input_rotation_right(7, 8)
         device.input_rotation_right(7, 8)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 2)
         self.assertEqual("A: 1000", device.handle.screen_string)
 
         # Slider / TRIGGER
@@ -355,68 +370,69 @@ class AmbitIntegrationTest(unittest.TestCase):
         device.input_slide_up(9, 128)
         device.input_slide_up(9, 64)
         device.input_slide_up(9, 64)
-        time.sleep(1)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 5)
         self.assertEqual("T: 255", device.handle.screen_string)
 
         # Slider / CYCLE
         device.input_slide_up(11, 255)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS)
         self.assertEqual("C: SIX", device.handle.screen_string)
         device.input_slide_down(11, 40)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS)
         self.assertEqual("C: FIVE", device.handle.screen_string)
         device.input_slide_down(11, 40)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS)
         self.assertEqual("C: FOUR", device.handle.screen_string)
         device.input_slide_down(11, 40)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS)
         self.assertEqual("C: THREE", device.handle.screen_string)
         device.input_slide_down(11, 40)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS)
         self.assertEqual("C: TWO", device.handle.screen_string)
         device.input_slide_down(11, 55)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS)
         self.assertEqual("C: ONE", device.handle.screen_string)
 
         # Button / TRIGGER
         device.input_pressed(4)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS)
         self.assertEqual("T: 1", device.handle.screen_string)
         device.input_released(4)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS)
         self.assertEqual("T: 0", device.handle.screen_string)
 
         # Button / CYCLE
         device.input_pressed(8)
         device.input_released(8)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 2)
         self.assertEqual("C: TWO", device.handle.screen_string)
         device.input_pressed(8)
         device.input_released(8)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 2)
         self.assertEqual("C: THREE", device.handle.screen_string)
         device.input_pressed(8)
         device.input_released(8)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 2)
         self.assertEqual("C: FOUR", device.handle.screen_string)
         device.input_pressed(8)
         device.input_released(8)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 2)
         self.assertEqual("C: FIVE", device.handle.screen_string)
         device.input_pressed(8)
         device.input_released(8)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 2)
         self.assertEqual("C: SIX", device.handle.screen_string)
         device.input_pressed(8)
         device.input_released(8)
-        time.sleep(0.5)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 2)
         self.assertEqual("C: ONE", device.handle.screen_string)
 
-        time.sleep(6)
-
+        # screen reset timeout reached
+        time.sleep(ambit.controller.Controller.SCREEN_RESET_SECONDS + 1)
         self.assertEqual("TEST", device.handle.screen_string)
         self.assertEqual(27, len(device.handle.messages['screen_string']))
 
+        # check for error conditions
         self.assertEqual(0, ctrl.failed_writes)
         self.assertEqual(0, ctrl.dropped_leds)
         self.assertEqual(0, ctrl.dropped_screen_strings)
@@ -474,13 +490,13 @@ class AmbitIntegrationTest(unittest.TestCase):
 
         device.layout_changed(ambit.fake.LAYOUT_BASE_ONLY)
 
-        time.sleep(1)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS)
 
         # When the base only is connected, check that the bytes match file data.
         ctrl.wait_for_layout()
         ctrl.configure_images()
 
-        time.sleep(1)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS)
 
         self.assertEqual(3, len(device.handle.screen_images))
 
@@ -508,16 +524,13 @@ class AmbitIntegrationTest(unittest.TestCase):
 
         ctrl.wait_for_layout()
 
-        time.sleep(1)
-
+        time.sleep(TEST_INPUT_SETTLED_SECONDS)
         device.layout_changed(ambit.fake.LAYOUT_RANDOM)
-
         ctrl.wait_for_layout()
-
-        time.sleep(1)
-
+        time.sleep(TEST_INPUT_SETTLED_SECONDS)
         self.assertEqual(20, len(ctrl.layout.connected()))
 
+        # check for error conditions
         self.assertEqual(0, ctrl.failed_writes)
         self.assertEqual(0, ctrl.dropped_leds)
         self.assertEqual(0, ctrl.dropped_screen_strings)
@@ -549,7 +562,7 @@ class AmbitIntegrationTest(unittest.TestCase):
 
         device.input_slide_up(7, 254)
 
-        time.sleep(1)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS)
 
         self.assertEqual([255,0,0,0,0,0,0,0], ctrl.layout.find_component(7).values)
 
@@ -578,13 +591,13 @@ class AmbitIntegrationTest(unittest.TestCase):
 
         device.input_slide_up(7, 254)
 
-        time.sleep(1)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS)
 
         self.assertEqual([254,0,0,0,0,0,0,0], ctrl.layout.find_component(7).values)
 
         device.input_slide_up(7, 1)
 
-        time.sleep(1)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS)
 
         self.assertEqual([255,0,0,0,0,0,0,0], ctrl.layout.find_component(7).values)
 
@@ -606,7 +619,11 @@ class AmbitIntegrationTest(unittest.TestCase):
         ctrl.open()
         ctrl.connect()
 
+        # initial state and layout
         ctrl.wait_for_layout()
+
+        self.assertEqual("PALETTE", device.handle.screen_string)
+        self.assertEqual([0], device.handle.messages['screen_display'])
 
         self.assertEqual(0, ctrl.layout.find_component(1).orientation)
         self.assertEqual(0, ctrl.layout.find_component(2).orientation)
@@ -627,12 +644,6 @@ class AmbitIntegrationTest(unittest.TestCase):
 
         self.assertEqual(8, len(ctrl.layout.connected()))
 
-        time.sleep(1)
-
-        self.assertEqual(1, len(device.handle.messages['check']))
-        self.assertEqual("PALETTE", device.handle.screen_string)
-        self.assertEqual([0], device.handle.messages['screen_display'])
-
         ctrl.wait()
 
         self.assertEqual({
@@ -646,6 +657,7 @@ class AmbitIntegrationTest(unittest.TestCase):
             8: (255, 255, 255),
         }, device.handle.leds)
 
+        # device input
         device.input_rotation_right(5, 1)
         device.input_rotation_right(5, 2)
         device.input_rotation_right(5, 2)
@@ -654,18 +666,17 @@ class AmbitIntegrationTest(unittest.TestCase):
         device.input_pressed(5)
         device.input_released(5)
         device.input_slide_up(7, 4)
-
-        time.sleep(2)
-
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 8)
         self.assertEqual("Slider: 4", device.handle.screen_string)
         self.assertEqual([0,0,0,3,0,0,0,0], ctrl.layout.find_component(5).values)
         self.assertEqual([4,0,0,0,0,0,0,0], ctrl.layout.find_component(7).values)
 
-        time.sleep(6)
-
+        # screen reset timeout reached
+        time.sleep(ambit.controller.Controller.SCREEN_RESET_SECONDS + 1)
         self.assertEqual("PALETTE", device.handle.screen_string)
         self.assertEqual(9, len(device.handle.messages['screen_string']))
 
+        # check for error conditions
         self.assertEqual(0, ctrl.failed_writes)
         self.assertEqual(0, ctrl.dropped_leds)
         self.assertEqual(6, ctrl.dropped_screen_strings)
@@ -830,10 +841,11 @@ class AmbitSimulatorTest(unittest.TestCase):
             self.ctrl.print_stats()
             self.ctrl.close()
 
+    @unittest.mock.patch('pygame.key')
     @unittest.mock.patch('pygame.display')
     @unittest.mock.patch('pygame.draw')
     @unittest.mock.patch('pygame.event.poll')
-    def test_render_orientation(self, mock_poll, mock_draw, mock_display):
+    def test_render_orientation(self, mock_poll, mock_draw, mock_display, mock_key):
         # Default pygame event is no event.
         mock_poll.return_value = pygame.event.Event(pygame.NOEVENT)
 

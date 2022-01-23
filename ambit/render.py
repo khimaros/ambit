@@ -244,7 +244,8 @@ class Display(object):
         self.thread = threading.Thread(target=self.worker)
 
     def open(self):
-        pygame.init()
+        pygame.display.init()
+        pygame.font.init()
         pygame.key.set_repeat(500, 100)
         self.update_display()
         self.layout_changed()

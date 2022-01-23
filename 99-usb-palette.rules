@@ -1,1 +1,8 @@
+# PaletteGear
 SUBSYSTEM=="usb", ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="09f8", GROUP:="scanner"
+
+# Teensy 2.0+
+SUBSYSTEM=="usb", ATTRS{idVendor}=="03eb", ATTRS{idProduct}=="2ffb", GROUP:="scanner"
+
+# MonogramCC
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="a2c5", GROUP:="scanner"

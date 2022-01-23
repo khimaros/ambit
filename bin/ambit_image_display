@@ -26,7 +26,7 @@ def show(surface):
 
 
 def main():
-    pygame.init()
+    pygame.display.init()
     screen = pygame.display.set_mode(DISPLAY_SIZE)
     surface = ambit.image.surface(sys.argv[1], surface_size=DISPLAY_SIZE)
     pygame.display.flip()

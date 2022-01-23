@@ -158,7 +158,7 @@ current value.
 
 Anything printed to stdout will be displayed to the device screen.
 
-Could be combined with something lik https://github.com/mel00010/OmniPause
+Could be combined with something like https://github.com/mel00010/OmniPause
 for system wide media control.
 
 ##### cycleMapping

@@ -276,7 +276,7 @@ class DemoScene:
         self.configure_callbacks()
 
         self.switch_control((0, 'FREQ'))
-        self.switch_demo(0)
+        self.switch_demo(1)
 
         prev_length = 0
         try:

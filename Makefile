@@ -140,6 +140,10 @@ test-integration-behaviors: setup
 	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_behaviors
 .PHONY: test-integration-behaviors
 
+test-integration-keepalive: setup
+	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_keepalive
+.PHONY: test-integration-keepalive
+
 test-message: setup
 	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitMessageTest
 .PHONY: test-message

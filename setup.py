@@ -3,7 +3,7 @@ import os
 import pathlib
 import setuptools
 
-package_data=dict()
+package_data = dict()
 package_data['ambit'] = []
 for path, paths, files in os.walk('ambit/resources/', followlinks=True):
     for f in files:
@@ -12,7 +12,7 @@ for path, paths, files in os.walk('ambit/resources/', followlinks=True):
 
 setuptools.setup(
     name='ambit',
-    version='0.3.5',
+    version='0.3.6',
     description='Take control of your Palette.',
     long_description=(
         '**ambit** is a Python library for interacting with PaletteGear '

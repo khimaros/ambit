@@ -831,11 +831,11 @@ class Controller:
     def join(self):
         self.shutdown_event.set()
         all_threads = (
-                self.bulk_read_thread,
-                self.bulk_write_thread,
+                self.keepalive_thread,
                 self.screen_string_thread,
                 self.led_thread,
-                self.keepalive_thread,
+                self.bulk_write_thread,
+                self.bulk_read_thread,
         )
         for thread in all_threads:
             if thread.is_alive():

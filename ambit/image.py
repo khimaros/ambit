@@ -82,7 +82,7 @@ def surface(path, image_size=IMAGE_SIZE, palette_size=PALETTE_SIZE, surface_size
 
 
 def load_standard_image(path, palette_size, image_size=IMAGE_SIZE):
-    pygame.init()
+    pygame.display.init()
 
     surface = pygame.image.load(path).convert(24)
     surface = pygame.transform.scale(surface, image_size)

@@ -28,8 +28,8 @@
 [-] support upstream keyMap bindings
 [-] document configuration options
 [-] increase type annotations to 15%
-[ ] resolve queries at config load to preserve actionMap on orienation change
-[ ] plugin system for component callback behavior
+[-] plugin system for component callback behavior
+[ ] resolve queries at config load to preserve actionMap on orientation change
 [ ] support long_pressed input type for buttons and dials
 [ ] support pressed_rotation_{right,left} input type for dials
 [ ] when config uses `rotation`, map to `rotation_left` and `rotation_right`
