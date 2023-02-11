@@ -16,7 +16,7 @@ docutils==0.18.1; python_version >= "3.6" and python_full_version < "3.0.0" or p
 idna==3.3; python_version >= "3.6" and python_full_version < "3.0.0" or python_full_version >= "3.6.0" and python_version >= "3.6"
 importlib-metadata==4.10.1; python_version < "3.8" and python_version >= "3.7"
 intelhex==2.3.0
-ipython==7.31.1; python_version >= "3.7"
+ipython==8.10.0; python_version >= "3.7"
 isort==5.10.1; python_full_version >= "3.6.2" and python_version < "4.0"
 jedi==0.18.1; python_version >= "3.7"
 jeepney==0.7.1; sys_platform == "linux" and python_version >= "3.7"
