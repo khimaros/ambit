@@ -58,7 +58,7 @@ traitlets==5.1.1; python_version >= "3.7"
 twine==3.7.1; python_version >= "3.6"
 typed-ast==1.4.3
 typing-extensions==3.10.0.2
-urllib3==1.26.8; python_version >= "3.6" and python_full_version < "3.0.0" or python_full_version >= "3.6.0" and python_version < "4" and python_version >= "3.6"
+urllib3==2.7.0; python_version >= "3.6" and python_full_version < "3.0.0" or python_full_version >= "3.6.0" and python_version < "4" and python_version >= "3.6"
 wcwidth==0.2.5; python_full_version >= "3.6.2" and python_version >= "3.7"
 webencodings==0.5.1; python_version >= "3.6"
 wrapt==1.13.3; python_full_version >= "3.6.2"
