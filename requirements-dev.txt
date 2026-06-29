@@ -13,7 +13,7 @@ coverage==5.5; (python_version >= "2.7" and python_full_version < "3.0.0") or (p
 cryptography==36.0.1; sys_platform == "linux" and python_version >= "3.7"
 decorator==5.1.1; python_version >= "3.7"
 docutils==0.18.1; python_version >= "3.6" and python_full_version < "3.0.0" or python_full_version >= "3.5.0" and python_version >= "3.6"
-idna==3.3; python_version >= "3.6" and python_full_version < "3.0.0" or python_full_version >= "3.6.0" and python_version >= "3.6"
+idna==3.15; python_version >= "3.6" and python_full_version < "3.0.0" or python_full_version >= "3.6.0" and python_version >= "3.6"
 importlib-metadata==4.10.1; python_version < "3.8" and python_version >= "3.7"
 intelhex==2.3.0
 ipython==7.31.1; python_version >= "3.7"
