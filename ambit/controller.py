@@ -299,7 +299,6 @@ class Controller:
         # FIXME: this doesn't feel like the right home
         self.current_led_values = (255, 255, 255)
         self.current_cycle_mappings = {}
-        self.current_screen_string_value = ''
         self.last_enqueued_screen_string = ''
 
         default_action_callbacks = {
@@ -566,7 +565,6 @@ class Controller:
                 component = self.layout.find_component(1)
                 component.screen_string = str(title)
                 self.last_screen_string_time = time.time()
-                self.current_screen_string_value = title
                 self.screen_string_queue.task_done()
 
     def drop_stale_screen_strings(self):
@@ -580,10 +578,12 @@ class Controller:
             self.dropped_screen_strings += 1
 
     def screen_string(self, title):
-        # skip titles that are already displayed or already waiting in the
-        # queue. deduping at enqueue avoids redundant device writes and keeps
-        # the delivered sequence independent of worker timing.
-        if title in (self.current_screen_string_value, self.last_enqueued_screen_string):
+        # skip a title identical to the one most recently queued. deduping
+        # against the last enqueued value (set synchronously here) rather than
+        # the last delivered value keeps the result independent of worker
+        # timing and avoids dropping an intermediate update that differs from
+        # what is currently displayed but repeats a still-queued value.
+        if title == self.last_enqueued_screen_string:
             return
         try:
             self.screen_string_queue.put(title, timeout=Controller.QUEUE_TIMEOUT_SECONDS)
