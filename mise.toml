@@ -1,0 +1,8 @@
+[tools]
+python = "3.12"
+uv = "latest"
+
+[env]
+# build the project venv against mise's python rather than letting uv
+# download a separate interpreter. dependency pins live in uv.lock.
+UV_PYTHON_PREFERENCE = "only-system"

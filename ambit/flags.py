@@ -2,8 +2,8 @@ import argparse
 
 flags = argparse.ArgumentParser(description='Take control of your Palette.')
 
-flags.add_argument('--device', default='16D0:09F8',
-                   help='usb device vendor:product id')
+flags.add_argument('--device', default='',
+                   help='usb device vendor:product id (empty = auto-detect, palette preferred)')
 
 flags.add_argument('--device_index', default=0,
                    help='index of device to control if multiple connected')

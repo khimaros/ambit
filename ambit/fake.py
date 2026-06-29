@@ -205,6 +205,7 @@ class Handle:
         self.screen_string = None
         self.screen_images = {}
         self._set_phase(Handle.PHASE_CONTROL_0)
+        self.message_format = ambit.message.MESSAGE_FORMAT_JSON
 
     def _process_input(self, message, data):
         for message_type in message:
@@ -265,7 +266,7 @@ class Handle:
         ])
 
     def write_messages(self, messages):
-        data = ambit.message_encode(messages)
+        data = ambit.message_encode(messages, self.message_format)
         self._write(data)
 
     def _write(self, data):
@@ -284,15 +285,15 @@ class Handle:
         if ambit.FLAGS.debug:
             print('[F] Device Phase Change:', self.phase)
 
-    def bulkWrite(self, ep, data, size, timeout=0):
-        messages, extra_data = ambit.message_decode(data)
+    def bulkWrite(self, data, timeout=0):
+        messages, extra_data = ambit.message_decode(data, self.message_format)
         if ambit.FLAGS.debug:
-            print('[F] Handle.bulkWrite()', ep, messages, size, timeout)
+            print('[F] Handle.bulkWrite()', messages, timeout)
         for message in messages:
             self._process_input(message, extra_data)
         return len(data)
 
-    def bulkRead(self, ep, size, timeout=0):
+    def bulkRead(self, size, timeout=0):
         data = memoryview(bytes())
         start_time = time.time()
         while (not timeout) or (time.time() - start_time) * 1000 < timeout:
@@ -302,7 +303,7 @@ class Handle:
             except queue.Empty:
                 pass
         if ambit.FLAGS.debug:
-            print('[F] Handle.bulkRead()', ep, size, timeout, '=>', ambit.message_decode(data))
+            print('[F] Handle.bulkRead()', size, timeout, '=>', ambit.message_decode(data, self.message_format))
         if not data:
             raise usb.USBError('no data to read')
         return data
@@ -346,9 +347,16 @@ class Device:
         self.interface_id = interface_id
         self._layout = {}
         self._version = ''
+        self._legacy = True
         self.values = {}
         self.kinds = {}
         self.handle = None
+
+    def legacy(self):
+        return self._legacy
+
+    def set_legacy(self, legacy):
+        self._legacy = legacy
 
     def components_connected(self, layout=LAYOUT_DEFAULT):
         if ambit.FLAGS.debug:

@@ -74,11 +74,8 @@ Install from the PyPI package repository:
 $ python3 -m pip install ambit
 ```
 
-For maximum functionality, install these dependencies:
-
-```shell
-$ python3 -m pip install pyusb pygame numpy
-```
+This pulls in the runtime dependencies (pyusb, pygame, numpy, msgpack)
+automatically.
 
 To install from source, see [#build](#build).
 
@@ -247,6 +244,10 @@ $ ambit_lavalamp
 
 ### Troubleshooting
 
+ambit auto-detects a connected PaletteGear or MonogramCC device, preferring
+PaletteGear when both are present. To force a specific device, pass
+`--device VENDOR:PRODUCT` (for example `--device 16D0:09F8`).
+
 If you followed the instructions in [#preparation](#preparation) and the simulator works,
 but you are still not able to connect to a physical device, you may need to
 adjust the `idVendor` and `idProduct` values in `99-usb-palette.rules`.
@@ -297,16 +298,12 @@ The TAB key can be used to rotate the layout clockwise 90 degrees.
 
 These instructions assume a recent Debian derivative.
 
-Ensure you have pip and virtualenv installed:
+ambit uses [mise](https://mise.jdx.dev/) to provision its toolchain
+(Python and [uv](https://docs.astral.sh/uv/)) and uv to manage the
+virtualenv and dependencies. Install mise if you don't already have it:
 
 ```
-$ sudo apt install git python3-pip python3-venv
-```
-
-Install Python wheel build dependencies:
-
-```
-$ sudo apt build-dep python3-pygame python3-pyusb
+$ curl https://mise.run | sh
 ```
 
 Check out the repository with Git.
@@ -315,11 +312,15 @@ Check out the repository with Git.
 $ git clone ...
 ```
 
-Create the virtualenv:
+Provision the toolchain and create the virtualenv:
 
 ```
+$ mise install
 $ make setup
 ```
+
+`make setup` runs `uv sync` under the hood, building `.venv` from the
+pinned `uv.lock`. All `make` targets execute inside this environment.
 
 You can run ambit in a virtualenv without installing anything.
 

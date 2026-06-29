@@ -23,9 +23,11 @@ account has privileges to capture.
 
 ### Create the Win10 VM
 
-Download Win10 VirtualBox image:
+Download Win10 Edge VirtualBox image:
 
 https://developer.microsoft.com/en-us/microsoft-edge/tools/vms/
+
+Extract the ZIP file into a new folder and enter it.
 
 Convert the OVA to a qcow image for use by KVM/QEMU:
 
@@ -36,6 +38,10 @@ $ qemu-img convert -O qcow2 MSEdge\ -\ Win10-disk001.vmdk MSEdge.qcow
 
 Cleanup the intermediate images. You only need to keep MSEdge.qcow
 
+```
+$ rm MSEdge*.vmdk MSEdge*.ova MSEdge*.ovf
+```
+
 Connect the Palette via USB
 
 Create a virt-manager config from MSEdge.qcow
@@ -44,6 +50,10 @@ Configure VM: "Add Hardware" => "USB Host Device" => "MCS Palette"
 
 Boot the VM, login with password "Passw0rd!"
 
+Install "visual studio runtime" from Microsoft. Install the x86 release.
+
+Install MonogramCC Creator in the VM.
+
 Install PaletteApp in the VM.
 
 At this point, you may want to take a snapshot of your Win10 VM
@@ -51,11 +61,29 @@ to restore from when the license expires.
 
 ### Capture USB traffic
 
+You may need to run wireshark as root or make sure `/dev/usbmon*` are r/w by your user.
+
+Check the output of `lsusb` to see which bus and device it is on. This should map to `/dev/usbmon<bus>`
+
+You can further filter the results with `usb.dst == "<BUS>.<DEV>.1" || usb.src == "<BUS>.<DEV>.1"`
+
 Linux host: use wireshark to begin capture from usbmonX
 
-Win10 VM: open PaletteApp, perform some action (eg. load config, press button)
+Win10 VM: open Monogram Creator, perform some action (eg. load config, press button)
 
-Linux host: stop the capture, save to docs/capture/
+Linux host: stop the capture, export specific packets (captured only) to docs/capture/ with a sensible name.
+
+Messages with `src == "host"` and `URB_BULK out` are messages from the application.
+Messages with `src == "host"` and `URB_BULK in` are ACK messages from the host.
+
+Messages with `dst == "host"` and `URB_BULK in` are unsolicited messages from the device.
+Messages with `dst == "host"` and `URB_BULK out` are ACK messages from the device.
+
+Also possible to filter based on the bulk data:
+
+```
+(usb.src == "<BUS>.<DEV>.1" || usb.dst == "<BUS>.<DEV>.1") && usb.capdata ~ "^\x7e\x81\xaaset_module"
+```
 
 ## Screen image capture
 

@@ -11,14 +11,19 @@ SHELL := /bin/bash
 MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
-#AMBIT_FLAGS = --verbose
+AMBIT_FLAGS = --verbose
 #AMBIT_FLAGS += --layouts=expertkit
 #AMBIT_FLAGS += --config_paths=/path/to/*.plp
 #AMBIT_FLAGS += --device=DEAD:BEEF
 #AMBIT_FLAGS += --device_index=0
-#AMBIT_FLAGS += --debug
+AMBIT_FLAGS += --debug
 
 SOURCES := ./ambit/ ./tools/ ./bin/ ./tests/
+
+# all python execution goes through uv, with the toolchain (python + uv)
+# provisioned by mise. see mise.toml, pyproject.toml, and uv.lock.
+UV := mise exec -- uv
+RUN := $(UV) run
 
 
 help:
@@ -28,33 +33,28 @@ help:
 .PHONY: help
 
 
-# VIRTUALENV
+# VIRTUALENV (managed by mise + uv)
 
-venv/bin/activate:
-	python3 -m venv ./venv
-
-out/make/deps: venv/bin/activate requirements.txt
+# uv sync provisions .venv from uv.lock and installs ambit in editable
+# mode. --inexact preserves any dev tools added by deps-dev.
+out/make/deps: pyproject.toml uv.lock
 	mkdir -p $(@D)
-	source ./venv/bin/activate && python3 -m pip install -Ir ./requirements.txt
+	$(UV) sync --inexact
 	touch $@
 
 deps: out/make/deps
 .PHONY: deps
 
-out/make/deps-dev: requirements-dev.txt out/make/deps
+out/make/deps-dev: pyproject.toml uv.lock
 	mkdir -p $(@D)
-	source ./venv/bin/activate && python3 -m pip install -Ir $<
+	$(UV) sync --extra dev
 	touch $@
 
 deps-dev: out/make/deps-dev
 .PHONY: deps-dev
 
-out/make/virtual: out/make/deps
-	mkdir -p $(@D)
-	source ./venv/bin/activate && python3 -m pip install -e .
-	touch $@
-
-virtual: out/make/virtual
+# uv sync already installs the project editable; kept for compatibility.
+virtual: deps
 .PHONY: virtual
 
 
@@ -64,8 +64,8 @@ extract-assets: docs/captures/core-update-images.pcapng
 	./tools/extract_reference_assets.sh docs/captures/core-update-images.pcapng ambit/resources/assets/reference/
 .PHONY: extract-assets
 
-ambit/resources/assets/%.raw: ambit/resources/assets/%.png out/make/virtual
-	source ./venv/bin/activate && ./bin/ambit_image_convert $< $@
+ambit/resources/assets/%.raw: ambit/resources/assets/%.png out/make/deps
+	$(RUN) ./bin/ambit_image_convert $< $@
 
 assets: ambit/resources/assets/23.raw ambit/resources/assets/24.raw ambit/resources/assets/25.raw
 .PHONY: assets
@@ -105,78 +105,78 @@ setup-dev: virtual assets deps-dev
 # TEST
 
 test: setup
-	source ./venv/bin/activate && python3 tests/test_ambit.py
+	$(RUN) python3 tests/test_ambit.py
 .PHONY: test
 
 test-integration: setup
-	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest
+	$(RUN) python3 tests/test_ambit.py AmbitIntegrationTest
 .PHONY: test-integration
 
 test-integration-configure_images: setup
-	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_configure_images
+	$(RUN) python3 tests/test_ambit.py AmbitIntegrationTest.test_configure_images
 .PHONY: test-integration-configure_images
 
 test-integration-layout_query: setup
-	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_layout_query
+	$(RUN) python3 tests/test_ambit.py AmbitIntegrationTest.test_layout_query
 .PHONY: test-integration-layout_query
 
 test-integration-layout_changed: setup
-	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_layout_changed
+	$(RUN) python3 tests/test_ambit.py AmbitIntegrationTest.test_layout_changed
 .PHONY: test-integration-layout_changed
 
 test-integration-slider_range: setup
-	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_slider_range_{broken,fixed}
+	$(RUN) python3 tests/test_ambit.py AmbitIntegrationTest.test_slider_range_{broken,fixed}
 .PHONY: test-integration-slider_range
 
 test-integration-reference_meta: setup
-	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_reference_meta
+	$(RUN) python3 tests/test_ambit.py AmbitIntegrationTest.test_reference_meta
 .PHONY: test-integration-reference_meta
 
 test-integration-multifunction_buttons: setup
-	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_multifunction_buttons
+	$(RUN) python3 tests/test_ambit.py AmbitIntegrationTest.test_multifunction_buttons
 .PHONY: test-integration-multifunction_buttons
 
 test-integration-behaviors: setup
-	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_behaviors
+	$(RUN) python3 tests/test_ambit.py AmbitIntegrationTest.test_behaviors
 .PHONY: test-integration-behaviors
 
 test-integration-keepalive: setup
-	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitIntegrationTest.test_keepalive
+	$(RUN) python3 tests/test_ambit.py AmbitIntegrationTest.test_keepalive
 .PHONY: test-integration-keepalive
 
 test-message: setup
-	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitMessageTest
+	$(RUN) python3 tests/test_ambit.py AmbitMessageTest
 .PHONY: test-message
 
 test-coordinates: setup
-	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitCoordinatesTest
+	$(RUN) python3 tests/test_ambit.py AmbitCoordinatesTest
 .PHONY: test-coordinates
 
 test-image: setup
-	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitImageTest
+	$(RUN) python3 tests/test_ambit.py AmbitImageTest
 .PHONY: test-image
 
 test-simulator: setup
-	source ./venv/bin/activate && python3 tests/test_ambit.py AmbitSimulatorTest
+	$(RUN) python3 tests/test_ambit.py AmbitSimulatorTest
 .PHONY: test-simulator
 
 
 # PROFILE
 
 benchmark: setup
-	source ./venv/bin/activate && bin/ambit_benchmark $(AMBIT_FLAGS)
+	$(RUN) bin/ambit_benchmark $(AMBIT_FLAGS)
 .PHONY: benchmark
 
 profile-simulator: deps-dev setup
 	mkdir -p ./out/mtprof/
-	source ./venv/bin/activate && python3 -m mtprof -o ./out/mtprof/simulator.prof bin/ambit_simulator $(AMBIT_FLAGS)
-	source ./venv/bin/activate && snakeviz ./out/mtprof/simulator.prof
+	$(RUN) python3 -m mtprof -o ./out/mtprof/simulator.prof bin/ambit_simulator $(AMBIT_FLAGS)
+	$(RUN) snakeviz ./out/mtprof/simulator.prof
 .PHONY: profile-simulator
 
 profile-test: deps-dev
 	mkdir -p ./out/mtprof/
-	source ./venv/bin/activate && python3 -m mtprof -o ./out/mtprof/test.prof tests/test_ambit.py
-	source ./venv/bin/activate && snakeviz ./out/mtprof/test.prof
+	$(RUN) python3 -m mtprof -o ./out/mtprof/test.prof tests/test_ambit.py
+	$(RUN) snakeviz ./out/mtprof/test.prof
 .PHONY: profile-test
 
 
@@ -187,7 +187,7 @@ cloc:
 .PHONY: cloc
 
 lint: deps-dev
-	source ./venv/bin/activate && mypy
+	$(RUN) mypy
 .PHONY: lint
 
 
@@ -195,7 +195,7 @@ lint: deps-dev
 
 docs:
 	mkdir -p ./out/docs/
-	source ./venv/bin/activate && pyreverse3 -Amy ambit -p ambit
+	$(RUN) pyreverse3 -Amy ambit -p ambit
 	mv classes_ambit.dot packages_ambit.dot ./out/docs/
 	dot -Tsvg ./out/docs/classes_ambit.dot > ./out/docs/classes_ambit.svg
 	dot -Tsvg ./out/docs/packages_ambit.dot > ./out/docs/packages_ambit.svg
@@ -203,9 +203,9 @@ docs:
 
 coverage-report: deps-dev setup
 	mkdir -p ./out/coverage/
-	coverage run --source=. --omit=./setup.py --branch -m unittest tests/test_ambit.py
-	coverage html --show-contexts -d ./out/coverage/htmlcov/
-	coverage report
+	$(RUN) coverage run --source=. --omit=./setup.py --branch -m unittest tests/test_ambit.py
+	$(RUN) coverage html --show-contexts -d ./out/coverage/htmlcov/
+	$(RUN) coverage report
 	xdg-open ./out/coverage/htmlcov/index.html
 .PHONY: coverage-report
 
@@ -238,22 +238,22 @@ flash_teensy-ledopt: flash_teensy-reference-1.3.1
 # UTILITY
 
 reboot_bootloader: setup
-	source ./venv/bin/activate && bin/ambit_reboot_bootloader $(AMBIT_FLAGS)
+	$(RUN) bin/ambit_reboot_bootloader $(AMBIT_FLAGS)
 .PHONY: reboot_bootloader
 
 push_assets: setup
-	source ./venv/bin/activate && bin/ambit_push_assets $(AMBIT_FLAGS)
+	$(RUN) bin/ambit_push_assets $(AMBIT_FLAGS)
 .PHONY: push_assets
 
 bin/ambit_console: bin/ambit_console_simulator setup
 	./tools/convert_simulator_bin.sh console
 
 console: bin/ambit_console setup-dev
-	source ./venv/bin/activate && bin/ambit_console $(AMBIT_FLAGS)
+	$(RUN) bin/ambit_console $(AMBIT_FLAGS)
 .PHONY: console
 
 console_simulator: setup-dev
-	source ./venv/bin/activate && bin/ambit_console_simulator $(AMBIT_FLAGS)
+	$(RUN) bin/ambit_console_simulator $(AMBIT_FLAGS)
 .PHONY: console_simulator
 
 
@@ -263,89 +263,89 @@ bin/ambit_lightshow: bin/ambit_lightshow_simulator setup
 	./tools/convert_simulator_bin.sh lightshow
 
 lightshow: bin/ambit_lightshow setup
-	source ./venv/bin/activate && bin/ambit_lightshow $(AMBIT_FLAGS)
+	$(RUN) bin/ambit_lightshow $(AMBIT_FLAGS)
 .PHONY: lightshow
 
 lightshow_simulator: setup
-	source ./venv/bin/activate && bin/ambit_lightshow_simulator $(AMBIT_FLAGS)
+	$(RUN) bin/ambit_lightshow_simulator $(AMBIT_FLAGS)
 .PHONY: lightshow_simulator
 
 bin/ambit_lavalamp: bin/ambit_lavalamp_simulator setup
 	./tools/convert_simulator_bin.sh lavalamp
 
 lavalamp: bin/ambit_lavalamp setup
-	source ./venv/bin/activate && bin/ambit_lavalamp $(AMBIT_FLAGS)
+	$(RUN) bin/ambit_lavalamp $(AMBIT_FLAGS)
 .PHONY: lavalamp
 
 lavalamp_simulator: setup
-	source ./venv/bin/activate && bin/ambit_lavalamp_simulator $(AMBIT_FLAGS)
+	$(RUN) bin/ambit_lavalamp_simulator $(AMBIT_FLAGS)
 .PHONY: lavalamp_simulator
 
 bin/ambit_demoscene: bin/ambit_demoscene_simulator setup
 	./tools/convert_simulator_bin.sh demoscene
 
 demoscene: bin/ambit_demoscene setup
-	source ./venv/bin/activate && bin/ambit_demoscene $(AMBIT_FLAGS)
+	$(RUN) bin/ambit_demoscene $(AMBIT_FLAGS)
 .PHONY: demoscene
 
 demoscene_simulator: setup
-	source ./venv/bin/activate && bin/ambit_demoscene_simulator $(AMBIT_FLAGS)
+	$(RUN) bin/ambit_demoscene_simulator $(AMBIT_FLAGS)
 .PHONY: demoscene_simulator
 
 
 # MAP
 
 map_hid: setup
-	source ./venv/bin/activate && bin/ambit_map_hid --debug ./ambit/resources/configs/hidmap.plp $(AMBIT_FLAGS)
+	$(RUN) bin/ambit_map_hid --debug ./ambit/resources/configs/hidmap.plp $(AMBIT_FLAGS)
 .PHONY: map_hid
 
 map_midi: setup
-	source ./venv/bin/activate && bin/ambit_map_midi $(AMBIT_FLAGS)
+	$(RUN) bin/ambit_map_midi $(AMBIT_FLAGS)
 .PHONY: map_midi
 
 
 # SIMULATOR
 
 simulator: setup
-	source ./venv/bin/activate && bin/ambit_simulator $(AMBIT_FLAGS)
+	$(RUN) bin/ambit_simulator $(AMBIT_FLAGS)
 .PHONY: simulator
 
 simulator-showcase: setup
-	source ./venv/bin/activate && bin/ambit_simulator --layouts=showcase $(AMBIT_FLAGS)
+	$(RUN) bin/ambit_simulator --layouts=showcase $(AMBIT_FLAGS)
 .PHONY: simulator-showcase
 
 simulator-test_behaviors: setup
-	source ./venv/bin/activate && bin/ambit_simulator --layouts=test-behaviors $(AMBIT_FLAGS)
+	$(RUN) bin/ambit_simulator --layouts=test-behaviors $(AMBIT_FLAGS)
 .PHONY: simulator-test_behaviors
 
 
 # START
 
 start: setup
-	source ./venv/bin/activate && bin/ambit $(AMBIT_FLAGS)
+	$(RUN) bin/ambit $(AMBIT_FLAGS)
 .PHONY: start
 
 start-showcase: setup
-	source ./venv/bin/activate && bin/ambit --layouts=showcase $(AMBIT_FLAGS)
+	$(RUN) bin/ambit --layouts=showcase $(AMBIT_FLAGS)
 .PHONY: start-showcase
 
 start-test_behaviors: setup
-	source ./venv/bin/activate && bin/ambit --layouts=test-behaviors $(AMBIT_FLAGS)
+	$(RUN) bin/ambit --layouts=test-behaviors $(AMBIT_FLAGS)
 .PHONY: start-test_behaviors
 
 
 # GUI
 
 gui: setup
-	source ./venv/bin/activate && bin/ambit_gui $(AMBIT_FLAGS)
+	$(RUN) bin/ambit_gui $(AMBIT_FLAGS)
 .PHONY: gui
 
 gui-showcase: setup
-	source ./venv/bin/activate && bin/ambit_gui --layouts=showcase $(AMBIT_FLAGS)
+	$(RUN) bin/ambit_gui --layouts=showcase $(AMBIT_FLAGS)
 .PHONY: gui-showcase
 
 gui-test_behaviors: setup
-	source ./venv/bin/activate && bin/ambit_gui --layouts=test-behaviors $(AMBIT_FLAGS)
+	$(RUN) bin/ambit_gui --layouts=test-behaviors $(AMBIT_FLAGS)
 .PHONY: gui-test_behaviors
 
 
@@ -359,14 +359,14 @@ uninstall:
 	python3 -m pip uninstall -y ambit
 .PHONY: uninstall
 
-bdist_wheel: deps-dev
-	python3 setup.py sdist bdist_wheel
+bdist_wheel:
+	$(UV) build
 .PHONY: bdist_wheel
 
 zipapp-dist:
 	mkdir -p ./out/zipapp-dist/
 	rm -rf ./out/zipapp-dist/
-	python3 -m pip install . -r ./requirements.txt --target ./out/zipapp-dist/
+	$(UV) pip install . -r ./requirements.txt --target ./out/zipapp-dist/
 .PHONY: zipapp-dist
 
 out/zipapp/%: zipapp-dist
@@ -374,15 +374,15 @@ out/zipapp/%: zipapp-dist
 	shiv -p "/usr/bin/env python3" --site-packages ./out/zipapp-dist/ --compressed -o $@ -c $(notdir $@)
 
 publish: deps-dev bdist_wheel
-	source ./venv/bin/activate && python3 -m twine upload dist/*
+	$(RUN) python3 -m twine upload dist/*
 .PHONY: publish
 
 publish-testpypi: deps-dev bdist_wheel
-	source ./venv/bin/activate && python3 -m twine upload --repository testpypi dist/*
+	$(RUN) python3 -m twine upload --repository testpypi dist/*
 .PHONY: publish-testpypi
 
 clean:
-	rm -rf ./venv/
+	rm -rf ./.venv/ ./venv/
 	rm -rf ./out/
 	rm -rf ./ambit.egg-info/
 	rm -rf .mypy_cache/

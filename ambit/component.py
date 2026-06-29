@@ -8,6 +8,18 @@ import copy
 from typing import Any, Callable, Dict, List, Tuple
 
 
+# deterministic order in which the input types raised by a single event are
+# dispatched. a set iterates in hash-seed order, which would leak into the
+# screen update sequence and callback invocation order, so we pin it here.
+INPUT_TYPE_DISPATCH_ORDER = [
+    Configuration.INPUT_PRESSED,
+    Configuration.INPUT_RELEASED,
+    Configuration.INPUT_SET,
+    Configuration.INPUT_ROTATION_RIGHT,
+    Configuration.INPUT_ROTATION_LEFT,
+]
+
+
 def sorted_rowwise(components):
     return sorted(components, key=lambda x: (-x.slot[1], x.slot[0]))
 
@@ -279,12 +291,18 @@ class Component(object):
     KIND_BUTTON = 1
     KIND_DIAL = 2
     KIND_SLIDER = 3
+    KIND_TRI_DIAL = 9
+    KIND_ORBITER = 24
+    KIND_CORE = 25
 
     KIND_NAME_MAP = {
         KIND_BASE: "Base",
         KIND_BUTTON: "Button",
         KIND_DIAL: "Dial",
         KIND_SLIDER: "Slider",
+        KIND_TRI_DIAL: "Tri-Dial",
+        KIND_CORE: 'Core',
+        KIND_ORBITER: "Orbiter",
     }
 
     def __init__(self, index, uid, kind, flip=False):
@@ -351,6 +369,18 @@ class Component(object):
     def determine_input_types(self):
         input_types = set()
 
+        if self.kind == Component.KIND_ORBITER:
+            pass
+
+        if self.kind == Component.KIND_CORE:
+            if self.values[0] == 1:
+                input_types.add(Configuration.INPUT_PRESSED)
+            if self.values[0] == 3:
+                input_types.add(Configuration.INPUT_PRESSED)
+
+        if self.kind == Component.KIND_TRI_DIAL:
+            pass
+
         if self.value_changed(0) and self.kind != Component.KIND_SLIDER:
             if self.values[0] == 1:
                 input_types.add(Configuration.INPUT_PRESSED)
@@ -368,7 +398,10 @@ class Component(object):
         if self.kind == Component.KIND_SLIDER:
             input_types.add(Configuration.INPUT_SET)
 
-        return list(input_types)
+        return sorted(input_types, key=lambda t: (
+                INPUT_TYPE_DISPATCH_ORDER.index(t)
+                if t in INPUT_TYPE_DISPATCH_ORDER
+                else len(INPUT_TYPE_DISPATCH_ORDER), t))
 
     def set_callback(self, input_type, action_name, behavior, callback, action_config):
         if behavior is None:

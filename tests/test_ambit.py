@@ -13,12 +13,18 @@ import ambit.simulator
 import glob
 import io
 import pygame
+import queue
 import time
 import unittest
 import unittest.mock
 
 # Seconds to wait for input to register and settle.
 TEST_INPUT_SETTLED_SECONDS = 0.25
+
+# Queue depth deep enough that a test input burst never overflows, so the
+# delivered screen-string count is deterministic. Drop-on-overflow behavior is
+# covered separately by test_screen_string_dropping.
+TEST_SCREEN_STRING_QUEUE_DEPTH = 256
 
 
 class AmbitIntegrationTest(unittest.TestCase):
@@ -616,6 +622,8 @@ class AmbitIntegrationTest(unittest.TestCase):
         config.profile.icon = ambit.Configuration.ICON_PALETTE
         ctrl = ambit.Controller(config, device)
         self.ctrl = ctrl
+        # avoid overflow drops so the delivered count is deterministic.
+        ctrl.screen_string_queue = queue.Queue(TEST_SCREEN_STRING_QUEUE_DEPTH)
         ctrl.open()
         ctrl.connect()
 
@@ -674,12 +682,61 @@ class AmbitIntegrationTest(unittest.TestCase):
         # screen reset timeout reached
         time.sleep(ambit.controller.Controller.SCREEN_RESET_SECONDS + 1)
         self.assertEqual("PALETTE", device.handle.screen_string)
-        self.assertEqual(9, len(device.handle.messages['screen_string']))
+        # with a fixed input-type dispatch order, enqueue-time dedup, and a
+        # queue deep enough to avoid overflow, the delivered count is fully
+        # deterministic regardless of thread timing.
+        self.assertEqual(11, len(device.handle.messages['screen_string']))
 
         # check for error conditions
         self.assertEqual(0, ctrl.failed_writes)
         self.assertEqual(0, ctrl.dropped_leds)
-        self.assertEqual(6, ctrl.dropped_screen_strings)
+        self.assertEqual(0, ctrl.dropped_screen_strings)
+
+    def test_screen_string_dropping(self):
+        # when the controller falls too far behind the device, a full
+        # screen-string queue drops all but the two most recent pending
+        # updates. exercise the accounting directly so it stays deterministic.
+        device = ambit.fake.Device('DEAD:BEEF', 'XYZ')
+        config = ambit.Configuration()
+        ctrl = ambit.Controller(config, device)
+
+        depth = ambit.controller.Controller.SCREEN_STRING_QUEUE_DEPTH
+        for i in range(depth):
+            ctrl.screen_string_queue.put('s%d' % i)
+
+        ctrl.drop_stale_screen_strings()
+
+        self.assertEqual(2, ctrl.screen_string_queue.qsize())
+        self.assertEqual(depth - 2, ctrl.dropped_screen_strings)
+
+    def test_dial_rotation_displays_set_value_only(self):
+        # a dial rotation raises both a relative-movement event and a 'set'
+        # event carrying the accumulated value; verbose mode should display
+        # only the latter.
+        ambit.FLAGS.debug = False
+        ambit.FLAGS.verbose = True
+
+        device = ambit.fake.Device('DEAD:BEEF', 'XYZ')
+        device.components_connected(ambit.fake.LAYOUT_DEFAULT_EXPERTKIT)
+        config = ambit.Configuration()
+        ctrl = ambit.Controller(config, device)
+        self.ctrl = ctrl
+        ctrl.screen_string_queue = queue.Queue(TEST_SCREEN_STRING_QUEUE_DEPTH)
+        ctrl.open()
+        ctrl.connect()
+        ctrl.wait_for_layout()
+        ctrl.wait()
+
+        before = len(device.handle.messages['screen_string'])
+        device.input_rotation_right(5, 4)
+        device.input_rotation_right(5, 4)
+        time.sleep(TEST_INPUT_SETTLED_SECONDS * 4)
+
+        # the accumulated value (4 then 8) is shown, never the relative
+        # movement (which would repeat 4).
+        self.assertEqual(
+            ['Dial: 4', 'Dial: 8'],
+            device.handle.messages['screen_string'][before:])
 
 
 class AmbitCoordinatesTest(unittest.TestCase):
@@ -819,17 +876,81 @@ class AmbitMessageTest(unittest.TestCase):
         data = ambit.message.message_encode([
             {'check': 1},
             {'screen_string': 'TEST'},
-        ])
+        ], ambit.message.MESSAGE_FORMAT_JSON)
         expected = memoryview(bytes(b'{"check":1}{"screen_string":"TEST"}'))
         self.assertEqual(expected, data)
 
     def test_message_decode(self):
         data = memoryview(bytes(b'{"screen_write":23}EXTRA_DATA'))
-        messages, extra_data = ambit.message.message_decode(data)
+        messages, extra_data = ambit.message.message_decode(data, ambit.message.MESSAGE_FORMAT_JSON)
         self.assertEqual([
             {'screen_write': 23}
         ], messages) 
         self.assertEqual(b'EXTRA_DATA', extra_data)
+
+
+# Minimal stand-in for a pyusb core device, as enumerated by usb.core.find
+# in Device._discover, so discovery can be exercised without hardware.
+class _FakeUsbDevice:
+    def __init__(self, vendor_id, product_id):
+        self.idVendor = vendor_id
+        self.idProduct = product_id
+
+
+class AmbitDeviceTest(unittest.TestCase):
+    PALETTE = _FakeUsbDevice(0x16D0, 0x09F8)
+    MONOGRAMCC = _FakeUsbDevice(0x0483, 0xA2C5)
+    UNKNOWN = _FakeUsbDevice(0xDEAD, 0xBEEF)
+
+    @unittest.mock.patch('usb.core.find')
+    def test_discovers_palette_without_explicit_id(self, mock_find):
+        # a palette on the bus should be auto-detected as a legacy device,
+        # even when an unknown device shares the bus.
+        mock_find.return_value = [self.UNKNOWN, self.PALETTE]
+        device = ambit.controller.Device('', 0)
+        self.assertEqual('16D0:09F8', device.device_id)
+        self.assertEqual(ambit.controller.Device.DEVICE_CLASS_PALETTEGEAR,
+                         device.device_class)
+        self.assertTrue(device.legacy())
+
+    @unittest.mock.patch('usb.core.find')
+    def test_discovers_monogramcc_without_explicit_id(self, mock_find):
+        mock_find.return_value = [self.UNKNOWN, self.MONOGRAMCC]
+        device = ambit.controller.Device('', 0)
+        self.assertEqual('0483:A2C5', device.device_id)
+        self.assertEqual(ambit.controller.Device.DEVICE_CLASS_MONOGRAMCC,
+                         device.device_class)
+        self.assertFalse(device.legacy())
+
+    @unittest.mock.patch('usb.core.find')
+    def test_discovery_prefers_palette_when_both_present(self, mock_find):
+        # monogram enumerates first, but palette is the preferred default.
+        mock_find.return_value = [self.MONOGRAMCC, self.PALETTE]
+        device = ambit.controller.Device('', 0)
+        self.assertEqual('16D0:09F8', device.device_id)
+        self.assertTrue(device.legacy())
+
+    @unittest.mock.patch('usb.core.find')
+    def test_explicit_id_restricts_discovery(self, mock_find):
+        # with both devices attached, an explicit id must win over order.
+        mock_find.return_value = [self.PALETTE, self.MONOGRAMCC]
+        device = ambit.controller.Device('0483:A2C5', 0)
+        self.assertEqual('0483:A2C5', device.device_id)
+        self.assertEqual(ambit.controller.Device.DEVICE_CLASS_MONOGRAMCC,
+                         device.device_class)
+
+    @unittest.mock.patch('usb.core.find')
+    def test_device_index_selects_among_multiple(self, mock_find):
+        mock_find.return_value = [self.PALETTE, self.MONOGRAMCC]
+        device = ambit.controller.Device('', 0, index=1)
+        self.assertEqual('0483:A2C5', device.device_id)
+
+    @unittest.mock.patch('usb.core.find')
+    def test_no_known_device_found(self, mock_find):
+        mock_find.return_value = [self.UNKNOWN]
+        device = ambit.controller.Device('', 0)
+        self.assertIsNone(device.device_class)
+        self.assertIsNone(device.device_id)
 
 
 class AmbitSimulatorTest(unittest.TestCase):

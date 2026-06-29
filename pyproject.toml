@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ambit"
+version = "0.3.6"
+description = "Take control of your Palette."
+readme = "README.md"
+license = "GPL-3.0-or-later"
+requires-python = ">=3.10"
+authors = [{ name = "khimaros" }]
+keywords = ["monogramcc", "palettegear", "demoscene", "pygame", "linux", "pyusb"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Operating System :: POSIX",
+    "Topic :: System :: Hardware",
+]
+
+# core runtime: pyusb drives the device, pygame/numpy render the screen
+# and simulator, msgpack encodes monogramcc messages.
+dependencies = [
+    "pyusb>=1.2.1",
+    "pygame>=2.6",
+    "numpy>=2.0",
+    "msgpack>=1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/khimaros/ambit"
+
+# dev tooling for tests, linting, the interactive console, firmware tools,
+# and publishing. installed via `uv sync --extra dev`.
+[project.optional-dependencies]
+dev = [
+    "mypy>=1.8",
+    "coverage>=7.0",
+    "ipython>=8.0",
+    "intelhex>=2.3",
+    "snakeviz>=2.2",
+    "mtprof>=0.0.3",
+    "build>=1.0",
+    "twine>=5.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["ambit*"]
+
+# package_data (ambit/resources/) and the bin/ scripts are discovered
+# dynamically in setup.py.

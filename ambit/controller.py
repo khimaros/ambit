@@ -2,7 +2,7 @@ import ambit.resources
 
 from ambit.component import Component, ComponentBehavior, ComponentLayout
 from ambit.configuration import Configuration
-from ambit.message import message_decode, message_encode
+from ambit.message import message_decode, message_encode, MESSAGE_FORMAT_JSON, MESSAGE_FORMAT_MSGPACK
 from ambit.flags import FLAGS
 
 import os
@@ -11,46 +11,163 @@ import sys
 import threading
 import time
 import usb
+import usb.core
+import usb.util
 import queue
 
 from typing import Any, Callable, Dict, List, Tuple
 
 
 class Device:
+    DEVICE_CLASS_PALETTEGEAR = 0
+    DEVICE_CLASS_MONOGRAMCC = 1
+
+    # discovery iterates these in order, so the first entry (PaletteGear)
+    # is the preferred default when multiple known devices are attached.
+    KNOWN_DEVICE_IDS = {
+            '16D0:09F8': DEVICE_CLASS_PALETTEGEAR,
+            '0483:A2C5': DEVICE_CLASS_MONOGRAMCC,
+    }
+
+    # cdc acm class codes; the data interface carries the bulk endpoints
+    # and the comm interface carries the control handshake.
+    CDC_COMM_CLASS = 0x02
+    CDC_DATA_CLASS = 0x0a
+
     def __init__(self, device_id, interface_id, index=0):
-        vendor_id, product_id = device_id.split(':')
-        self.vendor_id = int(vendor_id, 16)
-        self.product_id = int(product_id, 16)
         self.interface_id = interface_id
-        self.index = index
-        self._device = self._discover()
+        self.index = int(index)
         self.handle = None
+        # an explicit device_id restricts discovery to that id; an empty
+        # device_id scans the bus for any known device, palette first.
+        self.candidate_ids = self._candidate_ids(device_id)
+        self.device_id, self._device = self._discover()
+        self.device_class = None
+        if self._device is not None:
+            self.vendor_id = self._device.idVendor
+            self.product_id = self._device.idProduct
+            self.device_class = Device.KNOWN_DEVICE_IDS.get(self.device_id)
+
+    @staticmethod
+    def _candidate_ids(device_id):
+        if device_id:
+            return [device_id.upper()]
+        return list(Device.KNOWN_DEVICE_IDS)
 
     def _discover(self):
-        index = 0
-        buses = usb.busses()
-        for bus in buses:
-            for device in bus.devices:
-                if device.idVendor == self.vendor_id:
-                    if device.idProduct == self.product_id:
-                        if index == int(self.index):
-                            print('[0] Choosing device at USB discovery index %d.' % index)
-                            return device
-                        index += 1
-        return None
+        print('[0] Searching for USB device(s): %s' % ', '.join(self.candidate_ids))
+        matches = []
+        for device in usb.core.find(find_all=True):
+            device_id = '%04X:%04X' % (device.idVendor, device.idProduct)
+            if device_id in self.candidate_ids:
+                matches.append((self.candidate_ids.index(device_id), device_id, device))
+        # prefer earlier candidate ids, then pick the requested index.
+        matches.sort(key=lambda match: match[0])
+        if self.index < len(matches):
+            _, device_id, device = matches[self.index]
+            print('[0] Found %s at discovery index %d.' % (device_id, self.index))
+            return device_id, device
+        return None, None
 
     def open(self):
-        if not self._device:
+        if self._device is None:
             print('[!] Failed to read from device, check cable and permissions!')
             sys.exit(1)
-        handle = self._device.open()
+        device = self._device
+        # the device is already configured by the kernel; only set a
+        # configuration when none is active (avoids busy errors).
         try:
-            handle.detachKernelDriver(self.interface_id)
-        except:
-            pass
-        handle.claimInterface(self.interface_id)
-        self.handle = handle
-        return handle
+            config = device.get_active_configuration()
+        except usb.core.USBError:
+            device.set_configuration()
+            config = device.get_active_configuration()
+
+        data_interface, endpoint_in, endpoint_out = self._find_bulk_interface(config)
+        comm_interface = self._find_interface(config, Device.CDC_COMM_CLASS)
+        self.interface_id = data_interface.bInterfaceNumber
+        control_index = comm_interface.bInterfaceNumber if comm_interface else 0
+
+        # release the kernel cdc_acm driver from the comm and data
+        # interfaces so we can drive them; leave hid/audio interfaces alone.
+        for interface in (comm_interface, data_interface):
+            if interface is None:
+                continue
+            number = interface.bInterfaceNumber
+            try:
+                if device.is_kernel_driver_active(number):
+                    device.detach_kernel_driver(number)
+            except (usb.core.USBError, NotImplementedError):
+                pass
+
+        usb.util.claim_interface(device, self.interface_id)
+        self.handle = Handle(device, self.interface_id,
+                endpoint_in, endpoint_out, control_index)
+        return self.handle
+
+    def _find_bulk_interface(self, config):
+        # prefer the cdc data interface; otherwise accept any interface
+        # exposing both a bulk in and a bulk out endpoint.
+        fallback = None
+        for interface in config:
+            endpoint_in = endpoint_out = None
+            for endpoint in interface:
+                if usb.util.endpoint_type(endpoint.bmAttributes) != usb.util.ENDPOINT_TYPE_BULK:
+                    continue
+                if usb.util.endpoint_direction(endpoint.bEndpointAddress) == usb.util.ENDPOINT_IN:
+                    endpoint_in = endpoint
+                else:
+                    endpoint_out = endpoint
+            if endpoint_in is None or endpoint_out is None:
+                continue
+            if interface.bInterfaceClass == Device.CDC_DATA_CLASS:
+                return interface, endpoint_in, endpoint_out
+            if fallback is None:
+                fallback = (interface, endpoint_in, endpoint_out)
+        if fallback is None:
+            raise ValueError('no bulk interface found on device %s' % self.device_id)
+        return fallback
+
+    @staticmethod
+    def _find_interface(config, interface_class):
+        for interface in config:
+            if interface.bInterfaceClass == interface_class:
+                return interface
+        return None
+
+    def legacy(self):
+        return self.device_class == Device.DEVICE_CLASS_PALETTEGEAR
+
+
+class Handle:
+    """adapts a usb.core device to the handle interface used by Controller
+    and mirrored by ambit.fake.Handle. the bulk endpoints are auto-discovered
+    at open()."""
+
+    def __init__(self, device, interface_id, endpoint_in, endpoint_out, control_index=0):
+        self._device = device
+        self.interface_id = interface_id
+        self._endpoint_in = endpoint_in
+        self._endpoint_out = endpoint_out
+        self._control_index = control_index
+
+    def bulkWrite(self, data, timeout=0):
+        return self._endpoint_out.write(data, timeout)
+
+    def bulkRead(self, size, timeout=0):
+        return self._endpoint_in.read(size, timeout)
+
+    def controlMsg(self, request_type, request, buffer, value=0, index=None, timeout=100):
+        if index is None:
+            index = self._control_index
+        return self._device.ctrl_transfer(
+                request_type, request, value, index, buffer, timeout)
+
+    def reset(self):
+        self._device.reset()
+
+    def releaseInterface(self):
+        usb.util.release_interface(self._device, self.interface_id)
+        usb.util.dispose_resources(self._device)
 
 
 class Controller:
@@ -65,23 +182,24 @@ class Controller:
     # if the string length is larger than ~3 bytes.
     SCREEN_STRING_DELAY_SECONDS = 1 / 20
     SCREEN_STRING_QUEUE_DEPTH = 8
+    # FIXME: set based on firmware version or legacy()
     LED_DELAY_SECONDS = 1 / 60
     LED_QUEUE_DEPTH = 64
 
     KEEPALIVE_TIMEOUT_SECONDS = 5
     SCREEN_RESET_SECONDS = 3
 
-    USB_INTERFACE_ID = 0                # Interface for CDC endpoint.
-    USB_ENDPOINT_CONTROL_IN = 0x80      # CDC Control - EP 0 IN
-    USB_ENDPOINT_CONTROL_OUT = 0x00     # CDC Control - EP 0 OUT
-    USB_ENDPOINT_INTERRUPT_IN = 0x83    # CDC Interrupt - EP 3 IN
-    USB_ENDPOINT_BULK_IN = 0x84         # CDC Data (Bulk) - EP 4 IN
-    USB_ENDPOINT_BULK_OUT = 0x05        # CDC Data (Bulk) - EP 5 OUT
+    # interface hint passed to Device; the data interface and bulk
+    # endpoints are auto-discovered from the descriptors at open().
+    USB_INTERFACE_ID = 0
     USB_REQUEST_TYPE_IN = 0xa1          # CDC Control - Request 161
     USB_REQUEST_TYPE_OUT = 0x21         # CDC Control - Request 33
     USB_SETUP_REQUEST_HANDSHAKE = 0x20  # 32
     USB_SETUP_REQUEST_EMPTY_IN = 0x21   # 33
     USB_SETUP_REQUEST_EMPTY_OUT = 0x22  # 34
+
+    MESSAGE_FORMAT_JSON = 0
+    MESSAGE_FORMAT_MSGPACK = 1
 
     # Magic string used during control handshake.
     HANDSHAKE_BYTES = [0xe0, 0x93, 0x04, 0x00, 0x00, 0x00, 0x00, 0x08]
@@ -134,7 +252,7 @@ class Controller:
     }
 
     device: Device
-    handle: usb.legacy.DeviceHandle
+    handle: Handle
     config: Configuration
     layout: ComponentLayout
     lock: threading.Lock
@@ -142,12 +260,17 @@ class Controller:
     write_queue: queue.Queue
     action_callback_map: Dict[str, Callable]
     version_core: str
+    message_format: int
 
     def __init__(self, config=None, device=None):
         self.device = device or Device(FLAGS.device, Controller.USB_INTERFACE_ID, FLAGS.device_index)
         self.handle = None
         self.config = config
         self.layout = ComponentLayout(orientation=config.profile.orientation)
+
+        self.message_format = MESSAGE_FORMAT_MSGPACK
+        if self.device.legacy():
+            self.message_format = MESSAGE_FORMAT_JSON
 
         # TODO: do we need more than one lock?
         self.lock = threading.Lock()
@@ -177,6 +300,7 @@ class Controller:
         self.current_led_values = (255, 255, 255)
         self.current_cycle_mappings = {}
         self.current_screen_string_value = ''
+        self.last_enqueued_screen_string = ''
 
         default_action_callbacks = {
             Configuration.ACTION_PROFILE_PREV: self.callback_profile_prev,
@@ -264,17 +388,16 @@ class Controller:
     def bulk_write_messages(self, messages):
         if not messages:
             return
-        data = message_encode(messages)
+        if FLAGS.debug:
+            print('[@] WRITE MESSAGES:', messages)
+        data = message_encode(messages, self.message_format)
         self.write_queue.put(data, Controller.QUEUE_TIMEOUT_SECONDS)
 
     def bulk_write(self, data):
         if FLAGS.debug:
-            print("[@] BULK WRITE:", data.tobytes().decode())
+            print("[@] BULK WRITE:", data.tobytes())
         try:
-            self.handle.bulkWrite(
-                    Controller.USB_ENDPOINT_BULK_OUT,
-                    data,
-                    Controller.BULK_WRITE_TIMEOUT_MS)
+            self.handle.bulkWrite(data, Controller.BULK_WRITE_TIMEOUT_MS)
         except usb.USBError as exc:
             self.failed_writes += 1
             self.process_usb_error(exc)
@@ -290,20 +413,24 @@ class Controller:
                 self.process_bulk_message(message)
 
     def bulk_read(self):
-        try:
-            data = self.handle.bulkRead(
-                    Controller.USB_ENDPOINT_BULK_IN,
-                    Controller.BULK_READ_SIZE_BYTES,
-                    Controller.BULK_READ_TIMEOUT_MS)
-        except usb.USBError as exc:
-            self.failed_reads += 1
-            self.process_usb_error(exc)
-            return []
-        else:
-            if FLAGS.debug:
-                print("[@] BULK READ:", data.tobytes().decode())
-            messages, _ = message_decode(data)
-            return messages
+        complete_messages = []
+        extra_bytes = b''
+        while True:
+            try:
+                data = self.handle.bulkRead(
+                        Controller.BULK_READ_SIZE_BYTES,
+                        Controller.BULK_READ_TIMEOUT_MS)
+                if FLAGS.debug:
+                    print("[@] BULK READ:", data.tobytes())
+            except usb.USBError as exc:
+                self.failed_reads += 1
+                self.process_usb_error(exc)
+                return []
+            else:
+                messages, extra_bytes = message_decode(memoryview(extra_bytes + data), self.message_format)
+                complete_messages.extend(messages)
+                if not extra_bytes:
+                    return complete_messages
 
     def process_usb_error(self, exc):
         if exc.errno == 19:
@@ -311,9 +438,10 @@ class Controller:
             self.join()
 
     def start(self):
-        self.bulk_write_messages([
-            {"start": 1},
-        ])
+        if self.device.legacy():
+            self.bulk_write_messages([
+                {"start": 1},
+            ])
 
     def stop(self):
         self.bulk_write_messages([
@@ -321,9 +449,14 @@ class Controller:
         ])
 
     def check(self):
-        self.bulk_write_messages([
-            {"check": 1},
-        ])
+        messages = []
+
+        if self.device.legacy():
+            messages = [{'check': 1}]
+        else:
+            messages = [{'get_check': True}]
+
+        self.bulk_write_messages(messages)
 
     def led_worker(self):
         while not self.shutdown_event.is_set():
@@ -344,10 +477,30 @@ class Controller:
             except queue.Empty:
                 pass
             else:
-                data = message_encode([
-                    {"led": leds},
-                ])
-                self.bulk_write(data)
+                messages = []
+                if self.device.legacy():
+                    messages = [{'led': leds}]
+                else:
+                    # FIXME: use a real dataclass for LED, include module type.
+                    for led in leds:
+                        # FIXME: use module type for this instead of input ID.
+                        if led['i'] == 1:
+                            color = self.led_to_int([0, led['b'], led['g'], led['r']])
+                            messages.append({'set_module': [led['i'], 5, color]})
+                            color = self.led_to_int([1, led['b'], led['g'], led['r']])
+                            messages.append({'set_module': [led['i'], 5, color]})
+                            color = self.led_to_int([2, led['b'], led['g'], led['r']])
+                            messages.append({'set_module': [led['i'], 5, color]})
+                            color = self.led_to_int([127, 0, 0, 0])
+                            messages.append({'set_module': [led['i'], 5, color]})
+                        else:
+                            color = self.led_to_int([0, led['b'], led['g'], led['r']])
+                            messages.append({'set_module': [led['i'], 2, color]})
+
+                #data = message_encode(messages, self.message_format)
+                #self.bulk_write(data)
+                self.bulk_write_messages(messages)
+
                 # FIXME: this feels like a pretty inefficient way to
                 # update the component state, but fixing may require
                 # changing the API surface provided by Controller.led()
@@ -357,6 +510,9 @@ class Controller:
                         component.led = (led['r'], led['g'], led['b'])
                 self.last_led_time = time.time()
                 self.led_queue.task_done()
+
+    def led_to_int(self, bgr):
+        return int.from_bytes(bytes(bgr), 'big')
 
     def led(self, leds):
         try:
@@ -397,47 +553,63 @@ class Controller:
             if time.time() - self.last_screen_string_time < Controller.SCREEN_STRING_DELAY_SECONDS:
                 wait = Controller.SCREEN_STRING_DELAY_SECONDS - (time.time() - self.last_screen_string_time)
                 time.sleep(wait)
-            if self.screen_string_queue.full():
-                # TODO: should we be clearing the entire queue when full, or just some of it?
-                for _ in range(self.screen_string_queue.qsize() - 2):
-                    self.screen_string_queue.get(timeout=Controller.QUEUE_TIMEOUT_SECONDS)
-                    self.screen_string_queue.task_done()
-                    self.dropped_screen_strings += 1
+            self.drop_stale_screen_strings()
             try:
                 title = self.screen_string_queue.get(timeout=Controller.QUEUE_TIMEOUT_SECONDS)
             except queue.Empty:
                 pass
             else:
-                data = message_encode([
-                    { "screen_string": str(title) },
-                ])
-                self.bulk_write(data)
+                messages = []
+                if self.device.legacy():
+                    messages = [{ "screen_string": str(title) }]
+                self.bulk_write_messages(messages)
                 component = self.layout.find_component(1)
                 component.screen_string = str(title)
                 self.last_screen_string_time = time.time()
                 self.current_screen_string_value = title
                 self.screen_string_queue.task_done()
 
+    def drop_stale_screen_strings(self):
+        # a full queue means we have fallen behind the device; drop all but the
+        # two most recent pending updates so the screen can catch up quickly.
+        if not self.screen_string_queue.full():
+            return
+        for _ in range(self.screen_string_queue.qsize() - 2):
+            self.screen_string_queue.get(timeout=Controller.QUEUE_TIMEOUT_SECONDS)
+            self.screen_string_queue.task_done()
+            self.dropped_screen_strings += 1
+
     def screen_string(self, title):
-        if title == self.current_screen_string_value:
+        # skip titles that are already displayed or already waiting in the
+        # queue. deduping at enqueue avoids redundant device writes and keeps
+        # the delivered sequence independent of worker timing.
+        if title in (self.current_screen_string_value, self.last_enqueued_screen_string):
             return
         try:
             self.screen_string_queue.put(title, timeout=Controller.QUEUE_TIMEOUT_SECONDS)
         except queue.Full:
             self.dropped_screen_strings += 1
+            return
+        self.last_enqueued_screen_string = title
 
     def screen_write(self, path, index):
         print('[0] Uploading image %s to index %d' % (path, index))
         with open(path, 'rb') as f:
-            data = message_encode([{'screen_write': index}], f.read())
+            data = message_encode([{'screen_write': index}], self.message_format, f.read())
             flen = f.tell()
-        self.handle.bulkWrite(Controller.USB_ENDPOINT_BULK_OUT, data, 10000)
+        self.handle.bulkWrite(data, 10000)
         print('[0] Image upload to index %d (%d bytes) complete!'  % (index, flen))
 
     def screen_display(self, index):
-        self.bulk_write_messages([
-            {"screen_display": index},
-        ])
+        messages = []
+
+        if self.device.legacy():
+            messages = [{'screen_display': index}]
+        else:
+            messages = [{'invoke_display': index}]
+
+        self.bulk_write_messages(messages)
+
         component = self.layout.find_component(1)
         component.screen_display = index
 
@@ -466,9 +638,14 @@ class Controller:
         self.bulk_write_messages(messages)
 
     def send_version(self):
-        self.bulk_write_messages([
-            {"send_version": 1},
-        ])
+        messages = []
+
+        if self.device.legacy():
+            messages = [{'send_version': 1}]
+        else:
+            messages = [{'get_version': True}]
+
+        self.bulk_write_messages(messages)
 
     def boot(self):
         if len(self.layout.connected()) > 1:
@@ -749,6 +926,12 @@ class Controller:
     def display_input(self, component, input_type, value, raw_value):
         if not FLAGS.verbose:
             return
+        # a dial rotation also raises a 'set' event carrying the accumulated
+        # value; show only that, not the relative movement.
+        if component.kind == Component.KIND_DIAL and input_type in (
+                Configuration.INPUT_ROTATION_LEFT,
+                Configuration.INPUT_ROTATION_RIGHT):
+            return
         sv = str(value) if value is not None else str(raw_value)
         self.screen_string('%s: %s' % (component.kind_name(), sv))
 
@@ -760,6 +943,8 @@ class Controller:
         self.process_layout(self.layout.layout_dict)
 
     def process_bulk_message(self, message):
+        if FLAGS.debug:
+            print('[@] READ MESSAGE:', message)
         if 'l' in message:
             self.process_layout(message['l'])
         elif 'in' in message:
@@ -791,8 +976,11 @@ class Controller:
 
     def process_input(self, input_messages):
         for input_dict in input_messages:
-            i = input_dict["i"]
-            v = input_dict["v"]
+            if not input_dict:
+                continue
+
+            i = input_dict['i']
+            v = input_dict['v']
             component = self.layout.find_component(i)
             if not component:
                 return
@@ -817,6 +1005,11 @@ class Controller:
         self.version_core = version
 
     def wait_for_layout(self):
+        if not self.device.legacy():
+            self.bulk_write_messages([
+                {'get_layout': True},
+            ])
+
         while not self.layout:
             time.sleep(Controller.DEFAULT_WAIT_SECONDS)
 

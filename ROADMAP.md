@@ -44,4 +44,10 @@
 [ ] support for MIDI output profile (eg. control LEDs)
 [ ] switch to subpackages and `extras_require` for render/simulator and dev deps
 [ ] CLI based simulator, or just stick with tests?
+[x] migrate packaging/build to uv with pyproject.toml and refreshed dependencies
+[x] proper usb bus discovery: auto-detect device class across known ids (restores palette support)
+[x] modernize device i/o from pyusb 0.x legacy api to usb.core
+[x] auto-discover bulk endpoints/interface; drop dead endpoint constants and args
+[x] fix flaky screen-string test: deterministic input-type dispatch order, dedup queued titles
+[x] verbose mode: on dial rotation show only the accumulated 'set' value, not the relative movement
 ```
