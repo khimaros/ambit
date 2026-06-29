@@ -3,7 +3,7 @@ appnope==0.1.2; sys_platform == "darwin" and python_version >= "3.7"
 astroid==2.9.3; python_full_version >= "3.6.2"
 attrs==21.4.0; (python_version >= "2.7" and python_full_version < "3.0.0") or (python_full_version >= "3.5.0")
 backcall==0.2.0; python_version >= "3.7"
-bleach==4.1.0; python_version >= "3.6"
+bleach==6.4.0; python_version >= "3.6"
 certifi==2021.10.8; python_version >= "3.6" and python_full_version < "3.0.0" or python_full_version >= "3.6.0" and python_version >= "3.6"
 cffi==1.15.0; sys_platform == "linux" and python_version >= "3.7"
 charset-normalizer==2.0.10; python_full_version >= "3.6.0" and python_version >= "3.6"
